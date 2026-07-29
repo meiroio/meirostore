@@ -8,7 +8,11 @@ import {
   type FormEvent,
   type MouseEvent,
 } from "react";
-import { createMpt, type MptClient } from "@meiroio/web-sdk";
+import {
+  createMpt,
+  type MptClient,
+  type MptEventPayload,
+} from "@meiroio/web-sdk";
 import { TechnicalDrawing } from "./drawings";
 import {
   categories,
@@ -18,7 +22,6 @@ import {
   type Product,
 } from "@/lib/catalog";
 
-type EventPayload = Record<string, string | number | boolean | null>;
 type EventStatus = "preview" | "sending" | "sent" | "error";
 type MarketEvent = {
   id: string;
@@ -51,7 +54,13 @@ function initMpt(): MptClient | null {
     mpt = createMpt({
       collectionEndpoint,
       linkTracking: { enabled: false },
-      webBanners: { enabled: false },
+      trackingRules: { enabled: true },
+      webBanners: { enabled: true },
+      consent: {
+        storagePersistence: "granted",
+        userId: "granted",
+        sessionId: "granted",
+      },
     });
   } catch (error) {
     mptInitFailed = true;
@@ -67,7 +76,7 @@ function initMpt(): MptClient | null {
 
 function normalizeEvent(
   name: string,
-  payload: EventPayload,
+  payload: MptEventPayload,
   capturedAt: string,
   client: MptClient | null,
 ) {
@@ -110,8 +119,10 @@ export default function Storefront({ products }: { products: Product[] }) {
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [railOpen, setRailOpen] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const productDialogRef = useRef<HTMLDialogElement>(null);
   const cartDialogRef = useRef<HTMLDialogElement>(null);
+  const checkoutDialogRef = useRef<HTMLDialogElement>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProducts = products.filter((product) => {
@@ -136,8 +147,19 @@ export default function Storefront({ products }: { products: Product[] }) {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
+  const eventItems = cartItems.map(({ product, quantity }) => ({
+    item_id: product.id,
+    item_name: product.name,
+    item_category: product.category,
+    price: product.price,
+    quantity,
+  }));
   const activeEvent =
     events.find((event) => event.id === activeEventId) ?? events[0];
+
+  useEffect(() => {
+    initMpt();
+  }, []);
 
   useEffect(() => {
     const dialog = productDialogRef.current;
@@ -149,7 +171,7 @@ export default function Storefront({ products }: { products: Product[] }) {
     }
   }, [selectedProduct]);
 
-  function captureEvent(name: string, payload: EventPayload) {
+  function captureEvent(name: string, payload: MptEventPayload) {
     const id = crypto.randomUUID();
     const capturedAt = new Date().toISOString();
     const client = initMpt();
@@ -251,11 +273,31 @@ export default function Storefront({ products }: { products: Product[] }) {
 
   function beginCheckout() {
     captureEvent("begin_checkout", {
+      items: eventItems,
       item_count: cartCount,
       value: cartValue,
       currency,
     });
     cartDialogRef.current?.close();
+    setCompletedOrderId(null);
+    const dialog = checkoutDialogRef.current;
+    dialog?.showModal();
+    window.requestAnimationFrame(() => {
+      dialog?.querySelector<HTMLElement>("[data-dialog-primary]")?.focus();
+    });
+  }
+
+  function completePurchase() {
+    const transactionId = crypto.randomUUID();
+    captureEvent("purchase", {
+      transaction_id: transactionId,
+      items: eventItems,
+      item_count: cartCount,
+      value: cartValue,
+      currency,
+    });
+    setCart({});
+    setCompletedOrderId(transactionId);
   }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -284,6 +326,9 @@ export default function Storefront({ products }: { products: Product[] }) {
           </span>
           <span className="readout">
             collector <b>{endpointHost ?? "—"}</b>
+          </span>
+          <span className="readout">
+            personalization <b>{collectionEndpoint ? "armed" : "off"}</b>
           </span>
           <span className="readout" aria-live="polite">
             events <b>{String(events.length).padStart(3, "0")}</b>
@@ -339,6 +384,7 @@ export default function Storefront({ products }: { products: Product[] }) {
               className="control"
               type="button"
               onClick={openCart}
+              data-mpt-trigger="open-cart"
               aria-label={`Open cart with ${cartCount} ${
                 cartCount === 1 ? "item" : "items"
               }`}
@@ -353,13 +399,26 @@ export default function Storefront({ products }: { products: Product[] }) {
       <div className="workbench">
         <main className="catalog" id="catalog">
           <div className="catalog__head">
-            <h1>Every tap here becomes an event.</h1>
+            <h1>Every tap can shape the next visit.</h1>
             <p>
               Open a product, add it to the cart, run a search. The inspector
-              shows what the browser captured, the shape it normalizes to, and
-              the profile signal it produces.
+              shows what the browser captured while Engage can turn those
+              signals into banners, surveys, and audience-based experiences.
             </p>
           </div>
+
+          <section
+            className="activation-slot activation-slot--hero"
+            id="hero-personalization"
+            aria-label="Hero personalization slot"
+          >
+            <div className="activation-slot__empty">
+              <p className="micro">Engage inline slot</p>
+              <p>
+                Target <code>#hero-personalization</code> with a Web Banner.
+              </p>
+            </div>
+          </section>
 
           <div className="filter-bar">
             <nav className="tabs" aria-label="Product categories">
@@ -373,9 +432,9 @@ export default function Storefront({ products }: { products: Product[] }) {
                   aria-pressed={category === activeCategory}
                   onClick={() => {
                     setActiveCategory(category);
-                    captureEvent("catalog_filter_selected", {
-                      filter_name: "category",
-                      filter_value: category,
+                    captureEvent("select_content", {
+                      content_type: "catalog_category",
+                      item_id: category,
                     });
                   }}
                 >
@@ -389,6 +448,19 @@ export default function Storefront({ products }: { products: Product[] }) {
             </span>
           </div>
 
+          <section
+            className="activation-slot activation-slot--catalog"
+            id="catalog-personalization"
+            aria-label="Catalog personalization slot"
+          >
+            <div className="activation-slot__empty">
+              <p className="micro">Catalog activation</p>
+              <p>
+                A second inline surface for category or audience offers.
+              </p>
+            </div>
+          </section>
+
           {filteredProducts.length ? (
             <section className="cells" aria-label="Product catalog">
               {filteredProducts.map((product) => (
@@ -397,6 +469,7 @@ export default function Storefront({ products }: { products: Product[] }) {
                     className="cell__open"
                     type="button"
                     onClick={() => openProduct(product)}
+                    data-mpt-trigger="view-product"
                     aria-label={`View ${product.name}, ${formatPrice(product.price)}`}
                   >
                     <span className="cell__well">
@@ -416,6 +489,7 @@ export default function Storefront({ products }: { products: Product[] }) {
                     className="cell__add"
                     type="button"
                     onClick={() => addToCart(product)}
+                    data-mpt-trigger="add-to-cart"
                     data-state={
                       addedProductId === product.id ? "success" : "default"
                     }
@@ -447,7 +521,9 @@ export default function Storefront({ products }: { products: Product[] }) {
               </div>
               <div>
                 <dt>sdk</dt>
-                <dd>commerce events only — link tracking and web banners off</dd>
+                <dd>
+                  events + tracking rules + web banners — link tracking off
+                </dd>
               </div>
               <div>
                 <dt>catalog</dt>
@@ -458,7 +534,7 @@ export default function Storefront({ products }: { products: Product[] }) {
               <div>
                 <dt>checkout</dt>
                 <dd>
-                  simulated — emits begin_checkout, collects no payment
+                  simulated — emits begin_checkout + purchase, no payment
                 </dd>
               </div>
             </dl>
@@ -590,6 +666,7 @@ export default function Storefront({ products }: { products: Product[] }) {
                 className="action"
                 type="button"
                 data-dialog-primary
+                data-mpt-trigger="add-to-cart"
                 onClick={() => addToCart(selectedProduct, true)}
               >
                 add to cart · {formatPrice(selectedProduct.price)}
@@ -656,12 +733,13 @@ export default function Storefront({ products }: { products: Product[] }) {
                 className="action"
                 type="button"
                 data-dialog-primary
+                data-mpt-trigger="begin-checkout"
                 onClick={beginCheckout}
               >
                 simulate checkout
               </button>
               <p className="micro micro--note">
-                No payment is collected. This emits begin_checkout.
+                No payment is collected. Continue to emit purchase.
               </p>
             </>
           ) : (
@@ -674,6 +752,81 @@ export default function Storefront({ products }: { products: Product[] }) {
               >
                 browse the catalog
               </button>
+            </div>
+          )}
+        </div>
+      </dialog>
+
+      <dialog
+        className="sheet sheet--checkout"
+        ref={checkoutDialogRef}
+        onClick={closeOnBackdrop}
+        onClose={() => setCompletedOrderId(null)}
+      >
+        <div className="sheet__checkout">
+          <div className="rail__head">
+            <p className="micro">
+              {completedOrderId ? "Order complete" : "Simulated checkout"}
+            </p>
+            <button
+              className="rail__close"
+              type="button"
+              onClick={() => checkoutDialogRef.current?.close()}
+              aria-label="Close checkout"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+
+          {completedOrderId ? (
+            <div className="checkout-result" aria-live="polite">
+              <p className="checkout-result__mark" aria-hidden="true">
+                ✓
+              </p>
+              <h2>
+                {collectionEndpoint
+                  ? "Purchase event sent."
+                  : "Purchase event captured."}
+              </h2>
+              <p>
+                {collectionEndpoint
+                  ? "The cart is clear and Engage can now measure this conversion."
+                  : "The cart is clear. Connect Pipes to send this conversion."}
+              </p>
+              <code>{completedOrderId}</code>
+              <button
+                className="action"
+                type="button"
+                data-dialog-primary
+                onClick={() => checkoutDialogRef.current?.close()}
+              >
+                continue browsing
+              </button>
+            </div>
+          ) : (
+            <div className="checkout-confirm">
+              <p className="prose">
+                Complete the demo order to send a purchase event with the
+                transaction, line items, currency, and order value.
+              </p>
+              <div className="lines__total">
+                <span>
+                  {cartCount} {cartCount === 1 ? "item" : "items"}
+                </span>
+                <b>{formatPrice(cartValue)}</b>
+              </div>
+              <button
+                className="action"
+                type="button"
+                data-dialog-primary
+                data-mpt-trigger="complete-purchase"
+                onClick={completePurchase}
+              >
+                complete simulated purchase
+              </button>
+              <p className="micro micro--note">
+                Demo only. No address, card data, or payment is collected.
+              </p>
             </div>
           )}
         </div>

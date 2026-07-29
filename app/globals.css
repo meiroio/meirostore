@@ -399,6 +399,50 @@
     text-wrap: pretty;
   }
 
+  .activation-slot {
+    display: grid;
+    min-block-size: 6rem;
+    margin-inline: var(--gutter);
+    overflow: hidden;
+    place-items: center;
+    background: var(--color-well);
+    border: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .activation-slot--hero {
+    margin-block-end: var(--space-xl);
+  }
+
+  .activation-slot--catalog {
+    min-block-size: 4.5rem;
+    margin-block: var(--space-lg);
+  }
+
+  .activation-slot__empty {
+    display: grid;
+    gap: var(--space-2xs);
+    justify-items: center;
+    padding: var(--space-md);
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    text-align: center;
+  }
+
+  .activation-slot__empty code {
+    color: var(--color-ink-3);
+    font: inherit;
+  }
+
+  .activation-slot:has(> [data-mpt-web-banner-id])
+    > .activation-slot__empty {
+    display: none;
+  }
+
+  .activation-slot > [data-mpt-web-banner-id] {
+    max-inline-size: 100%;
+  }
+
   .filter-bar {
     display: flex;
     gap: var(--space-md);
@@ -1222,6 +1266,69 @@
     font-size: var(--text-2xs);
   }
 
+  .sheet--checkout {
+    inline-size: min(calc(100% - 2rem), 32rem);
+    margin: auto;
+  }
+
+  .sheet__checkout {
+    display: grid;
+  }
+
+  .checkout-confirm,
+  .checkout-result {
+    display: grid;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+
+  .sheet__checkout .lines__total {
+    margin: 0;
+  }
+
+  .sheet__checkout .micro--note {
+    padding: 0;
+  }
+
+  .checkout-result {
+    justify-items: start;
+  }
+
+  .checkout-result__mark {
+    display: grid;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    place-items: center;
+    background: var(--color-paper-3);
+    color: var(--color-ok);
+    font-family: var(--font-label);
+    font-size: var(--text-lg);
+  }
+
+  .checkout-result h2 {
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 500;
+    letter-spacing: var(--tracking-display);
+  }
+
+  .checkout-result > p:not(.checkout-result__mark) {
+    color: var(--color-ink-3);
+    text-wrap: pretty;
+  }
+
+  .checkout-result code {
+    max-inline-size: 100%;
+    padding: var(--space-sm);
+    overflow-wrap: anywhere;
+    background: var(--color-well);
+    border: var(--rule-hair) solid var(--color-rule);
+    color: var(--color-ink-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+  }
+
   /* ────────── Hover · pointer devices only ────────── */
 
   @media (hover: hover) and (pointer: fine) {
@@ -1393,7 +1500,9 @@
     .log,
     .stages,
     .payload pre,
-    .void button {
+    .void button,
+    .activation-slot,
+    .checkout-result code {
       border-color: CanvasText;
     }
 

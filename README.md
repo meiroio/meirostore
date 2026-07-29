@@ -1,8 +1,9 @@
 # Meiro Market
 
-A self-contained commerce demo for the Meiro web SDK. Visitors browse a local
-catalog, add products to a cart, and inspect the raw and normalized event
-shapes in the live event drawer.
+A self-contained commerce demo for a complete Meiro Web SDK loop. Visitors
+browse a local catalog, generate commerce events, receive Engage Web Banners,
+complete a simulated purchase, and inspect the explicit storefront events in
+the live event drawer.
 
 ## Run locally
 
@@ -12,37 +13,99 @@ npm run dev
 ```
 
 The catalog, cart, product art, and transformation preview are local. No
-Shopify account, database, payment provider, or environment variable is
-required for preview mode.
+Shopify account, database, or payment provider is required.
 
 ## Connect Meiro Pipes
 
 Set the public collection endpoint in `.env.local`. Use the complete Web SDK
-collector URL from Meiro Pipes, including the scheme, host, and path—not only
-the instance hostname:
+collector URL from Meiro Pipes, including the scheme, host, and source slug:
 
 ```bash
-NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://docs.dev.pipes.meiro.io/collect/web-sdk
+NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://your-pipes-domain/collect/web-sdk
 ```
+
+Restart or redeploy the app after changing this build-time variable.
 
 The storefront creates one browser client with
-[`@meiroio/web-sdk`](https://www.npmjs.com/package/@meiroio/web-sdk) and calls:
+[`@meiroio/web-sdk`](https://www.npmjs.com/package/@meiroio/web-sdk).
+It enables tracking rules and Web Banners at page load, but leaves automatic
+link tracking off to avoid duplicating the explicit commerce events.
 
-```js
-mpt.event("add_to_cart", {
-  item_id: "schema-tee",
-  item_name: "Schema Tee",
-  price: 42,
-  currency: "USD",
-});
-```
+The demo grants SDK storage and identity consent so realtime audience targeting
+works immediately. A production site must replace this with choices from its
+consent-management platform.
 
 Without `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`, the inspector is labeled
-**Local preview** and no network request is made.
+**Local preview**, personalization is off, and no request is sent.
 
-The adapter lives in `app/storefront.tsx` in `initMpt()` and `captureEvent()`.
-Automatic link tracking and web banners are disabled so only the storefront's
-explicit demo events are sent.
+## Configure Pipes
+
+1. In **Pipes → Sources**, create a source from the **Web SDK** template and
+   enable it.
+2. Copy its collection URL from **Tracking Setup** into
+   `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`.
+3. Keep tracking rules enabled. A page-view-only rule is enough for this demo:
+
+   ```js
+   function configure(sdk, on, runtime) {
+     on.page({}, () => {
+       sdk.track("page_view", {
+         pathname: runtime.location.pathname,
+         title: runtime.title,
+       })
+     })
+   }
+   ```
+
+4. Confirm the template's built-in event types include `page_view`,
+   `select_content`, `search`, `view_item`, `add_to_cart`,
+   `remove_from_cart`, `view_cart`, `begin_checkout`, `purchase`,
+   `web_banner_impression`, `web_banner_click`, `web_banner_close`,
+   `web_banner_submit`, and `survey_answer`.
+5. Browse the store and verify accepted events and `user_id` extraction on the
+   source or Dashboard before building an audience.
+
+All storefront events use predefined Web SDK names, so the demo does not need
+a custom event type.
+
+## Configure Engage
+
+Start with an untargeted banner to prove delivery before adding audience
+conditions.
+
+1. Open **Engage → Channels → Web Banners** and create a banner using the same
+   Web SDK source.
+2. For an inline banner, choose an ID anchor and enter either
+   `hero-personalization` or `catalog-personalization`.
+3. For a popup after an action, use the click trigger selector
+   `[data-mpt-trigger="add-to-cart"]` or
+   `[data-mpt-trigger="complete-purchase"]`.
+4. Add a session frequency cap of `1`, preview the banner on the store, save
+   it, and enable serving.
+5. For targeting, create a realtime attribute from `view_item`,
+   `add_to_cart`, or `purchase` events, build a realtime audience from that
+   attribute, and add the audience condition to the banner.
+6. Create a **Purchase** Goal with the `purchase` event type and `$.value` as
+   the numeric value field. Attach it to the banner or realtime audience when
+   conversion reporting is needed.
+
+Audience membership is read when Web Banners initialize. Reload the store after
+a profile enters a new realtime audience to test the targeted experience.
+
+## Stable activation selectors
+
+| Purpose | Selector |
+| --- | --- |
+| Hero inline banner | `#hero-personalization` |
+| Catalog inline banner | `#catalog-personalization` |
+| Product view trigger | `[data-mpt-trigger="view-product"]` |
+| Add-to-cart trigger | `[data-mpt-trigger="add-to-cart"]` |
+| Cart-open trigger | `[data-mpt-trigger="open-cart"]` |
+| Checkout trigger | `[data-mpt-trigger="begin-checkout"]` |
+| Purchase trigger | `[data-mpt-trigger="complete-purchase"]` |
+
+The in-page inspector records events sent by the storefront adapter. Automatic
+tracking-rule and Web Banner lifecycle events are visible in Pipes.
 
 ## Checks
 
