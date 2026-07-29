@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meiro Market
 
-## Getting Started
+A self-contained commerce demo for the Meiro web SDK. Visitors browse a local
+catalog, add products to a cart, and inspect the raw and normalized event
+shapes in the live event drawer.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The catalog, cart, product art, and transformation preview are local. No
+Shopify account, database, payment provider, or environment variable is
+required for preview mode.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Connect Meiro Pipes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set the public collection endpoint in `.env.local`:
 
-## Learn More
+```bash
+NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://your-domain.com/collect/website
+```
 
-To learn more about Next.js, take a look at the following resources:
+The storefront creates one browser client with
+[`@meiroio/web-sdk`](https://www.npmjs.com/package/@meiroio/web-sdk) and calls:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```js
+mpt.event("add_to_cart", {
+  item_id: "schema-tee",
+  item_name: "Schema Tee",
+  price: 42,
+  currency: "USD",
+});
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Without `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`, the inspector is labeled
+**Local preview** and no network request is made.
 
-## Deploy on Vercel
+The adapter lives in `app/storefront.tsx` in `initMpt()` and `captureEvent()`.
+Automatic link tracking and web banners are disabled so only the storefront's
+explicit demo events are sent.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```

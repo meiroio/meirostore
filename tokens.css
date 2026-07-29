@@ -1,0 +1,112 @@
+/* Meiro Market · Terminal (Meiro-anchored) tokens · OKLCH only
+   axes — paper band: dark (L 13%) · display style: mono · accent hue: warm (40°)
+
+   Brand values lifted from meiro.io's declared system:
+     --accent       #FF5F19  oklch(68.8% 0.208 40)
+     --accent-hover #E5540F  oklch(63.3% 0.192 40)
+     --dark / --ink #0C0C18  oklch(16.1% 0.025 283)
+     --dark-2       #1A1A2E  oklch(22.8% 0.038 283)
+     --success      #87C867  oklch(76.7% 0.146 136)
+     --warning      #f6a83c  oklch(79.0% 0.149 71)
+   The paper ramp keeps their violet cast (283°) and extends darker than
+   their #0C0C18, which is a dark *section* on a light site rather than a
+   full app background. */
+:root {
+  color-scheme: dark;
+
+  /* ── Surfaces · three decisive steps on the brand's violet-cast dark.
+        paper-2 is exactly #0C0C18, paper-3 exactly #1A1A2E. ── */
+  --color-paper: oklch(12.8% 0.02 282);
+  --color-paper-2: oklch(16% 0.025 282);
+  --color-paper-3: oklch(22.7% 0.039 282.6);
+  --color-well: oklch(9.5% 0.016 282);
+
+  /* ── Rules · rule = table hairline, rule-2 = control boundary (≥3:1) ── */
+  --color-rule: oklch(28% 0.02 282);
+  --color-rule-2: oklch(48% 0.026 282);
+
+  /* ── Ink · every step verified ≥4.5:1 on paper, paper-2 and paper-3 ── */
+  --color-ink: oklch(95% 0.004 282);
+  --color-ink-2: oklch(82% 0.008 282);
+  --color-ink-3: oklch(68% 0.01 282);
+  --color-muted: oklch(62% 0.012 282);
+
+  /* ── Accent · Meiro orange. Structural + brand only, never a flood.
+        accent-ink is the brand dark: white on #FF5F19 is only 3.0:1. ── */
+  --color-accent: oklch(68.8% 0.208 39.6);
+  --color-accent-hover: oklch(63.1% 0.191 40.4);
+  --color-accent-ink: oklch(16% 0.025 282);
+
+  /* Focus stays cool on purpose — it must never be mistaken for an
+     accent-coloured active state now that the accent is warm. */
+  --color-focus: oklch(80% 0.13 230);
+
+  /* ── Event lifecycle · brand success/warning exactly; error pushed to hue
+        18 so it cannot be confused with the 40° accent, and lifted to L66
+        so it still clears 4.5:1 on paper-3 (the selected-row background). ── */
+  --color-ok: oklch(76.6% 0.145 136);
+  --color-warn: oklch(78.9% 0.149 70.4);
+  --color-error: oklch(66% 0.21 18);
+
+  /* ── Technical drawing · uniform monoline system ── */
+  --color-art-line: oklch(66% 0.012 282);
+  --color-art-line-2: oklch(47% 0.016 282);
+  --color-art-grid: oklch(23% 0.018 282);
+
+  --font-display: var(--font-geist-mono), ui-monospace, monospace;
+  --font-body: var(--font-geist-sans), ui-sans-serif, sans-serif;
+  --font-label: var(--font-geist-mono), ui-monospace, monospace;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: clamp(1.5rem, 1.2vw + 1rem, 2rem);
+  --text-display: clamp(1.5rem, 1.6vw + 0.75rem, 2.25rem);
+
+  --tracking-label: 0.12em;
+  --tracking-display: -0.01em;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 200ms;
+  --dur-long: 360ms;
+
+  /* ── Square, top to bottom. The opposite of pill-everything. ── */
+  --rule-hair: 1px;
+  --rule-card: 1px;
+  --rule-heavy: 2px;
+  --radius-card: 0;
+  --radius-pill: 0;
+  --radius-input: 0;
+
+  /* ── Chrome + rail dimensions ── */
+  --gutter: clamp(var(--space-md), 2.5vw, var(--space-xl));
+  --chrome-rail: 1.75rem;
+  --chrome-bar: 3rem;
+  --chrome-height: calc(var(--chrome-rail) + var(--chrome-bar));
+  --rail-width: 30rem;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 200;
+  --z-chrome: 300;
+  --z-rail: 350;
+  --z-modal: 400;
+}
