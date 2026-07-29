@@ -17,10 +17,12 @@ required for preview mode.
 
 ## Connect Meiro Pipes
 
-Set the public collection endpoint in `.env.local`:
+Set the public collection endpoint in `.env.local`. Use the complete Web SDK
+collector URL from Meiro Pipes, including the scheme, host, and path—not only
+the instance hostname:
 
 ```bash
-NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://your-domain.com/collect/website
+NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://docs.dev.pipes.meiro.io/collect/web-sdk
 ```
 
 The storefront creates one browser client with
