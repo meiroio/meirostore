@@ -172,59 +172,6 @@ function persistCart(cart: Cart) {
   cartSubscribers.forEach((onCartChange) => onCartChange());
 }
 
-/* Waiting state for an Engage inline slot. Deliberately built from the same
-   parts as a real category banner - dashed plate, copy block, action block -
-   so the slot reads as "a banner belongs here" rather than as leftover empty
-   space, and so the swap to real content is not a jarring change of shape.
-   The sweep is the only animation; it is what separates waiting from broken. */
-function ActivationPlaceholder({
-  label,
-  anchor,
-}: {
-  label: string;
-  anchor: string;
-}) {
-  return (
-    <div className="slot-skeleton">
-      <span className="slot-skeleton__plate" aria-hidden="true">
-        <svg className="slot-skeleton__mark" viewBox="0 0 32 32">
-          <path d="M16 4L28 16L16 28L4 16Z" />
-        </svg>
-      </span>
-
-      {/* Mirrors the banner's lead column: eyebrow, then a two-line headline. */}
-      <span className="slot-skeleton__copy">
-        <span className="slot-skeleton__label">
-          <i aria-hidden="true" />
-          {label}
-        </span>
-        <span
-          className="slot-skeleton__bar slot-skeleton__bar--wide"
-          aria-hidden="true"
-        />
-        <span
-          className="slot-skeleton__bar slot-skeleton__bar--narrow"
-          aria-hidden="true"
-        />
-        <code>{anchor}</code>
-      </span>
-
-      {/* Mirrors the banner's action column: lede, item index, then the CTA. */}
-      <span className="slot-skeleton__action">
-        <span
-          className="slot-skeleton__bar slot-skeleton__bar--wide"
-          aria-hidden="true"
-        />
-        <span
-          className="slot-skeleton__bar slot-skeleton__bar--narrow"
-          aria-hidden="true"
-        />
-        <span className="slot-skeleton__cta" aria-hidden="true" />
-      </span>
-    </div>
-  );
-}
-
 export default function Storefront({ products }: { products: Product[] }) {
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [query, setQuery] = useState("");
@@ -533,16 +480,11 @@ export default function Storefront({ products }: { products: Product[] }) {
           </div>
 
           <div className="activation-fit activation-fit--hero">
-          <section
-            className="activation-slot"
-            id="hero-personalization"
-            aria-label="Hero personalization slot"
-          >
-            <ActivationPlaceholder
-              label="Engage inline slot"
-              anchor="#hero-personalization"
+            <section
+              className="activation-slot"
+              id="hero-personalization"
+              aria-label="Hero personalization slot"
             />
-          </section>
           </div>
 
           <div className="filter-bar">
@@ -574,16 +516,11 @@ export default function Storefront({ products }: { products: Product[] }) {
           </div>
 
           <div className="activation-fit activation-fit--catalog">
-          <section
-            className="activation-slot"
-            id="catalog-personalization"
-            aria-label="Catalog personalization slot"
-          >
-            <ActivationPlaceholder
-              label="Catalog activation"
-              anchor="#catalog-personalization"
+            <section
+              className="activation-slot"
+              id="catalog-personalization"
+              aria-label="Catalog personalization slot"
             />
-          </section>
           </div>
 
           {filteredProducts.length ? (
