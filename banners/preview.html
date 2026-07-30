@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meiro Market - banner preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        /* The storefront page background, so each banner is judged against
+           the surface it will actually sit on. */
+        background: #06060f;
+        color: #eeeef1;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+
+      main {
+        display: grid;
+        gap: 2.25rem;
+        inline-size: min(100%, 76rem);
+        margin-inline: auto;
+        padding: 2.5rem clamp(1rem, 3vw, 2rem);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+
+      .note {
+        max-inline-size: 74ch;
+        margin: 0;
+        color: #97989e;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.8125rem;
+        line-height: 1.55;
+      }
+
+      .note code {
+        color: #eeeef1;
+        font-family: inherit;
+      }
+
+      section {
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      h2 {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: baseline;
+        margin: 0;
+        padding-block-end: 0.5rem;
+        border-block-end: 1px solid #272833;
+        color: #85858d;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h2 code {
+        color: #ff5f19;
+        font: inherit;
+        letter-spacing: 0.04em;
+        text-transform: none;
+      }
+
+      iframe {
+        display: block;
+        inline-size: 100%;
+        border: 0;
+      }
+
+      /* The banners key off their container's width, not the viewport, so
+         narrowing a frame is enough to exercise both collapse points. */
+      .modes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        align-items: flex-start;
+      }
+
+      .modes > div {
+        display: grid;
+        gap: 0.4rem;
+      }
+
+      .modes p {
+        margin: 0;
+        color: #85858d;
+        font-size: 0.625rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      /* The inline width on these frames beats the 100% rule above. */
+      .modes iframe {
+        flex: 0 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Meiro Market &mdash; category banner preview</h1>
+      <p class="note">
+        A local harness, not a deliverable. Each frame loads one banner file
+        exactly as it will be pasted into Engage, on the storefront's own
+        background. Serve this directory over HTTP rather than opening it from
+        disk, or the browser will block the frames:
+        <code>python3 -m http.server 8777</code>
+      </p>
+
+      <section>
+        <h2>Wear <code>market-category-wear-inline.html</code></h2>
+        <iframe
+          src="./market-category-wear-inline.html"
+          title="Wear banner"
+        ></iframe>
+      </section>
+
+      <section>
+        <h2>Carry <code>market-category-carry-inline.html</code></h2>
+        <iframe
+          src="./market-category-carry-inline.html"
+          title="Carry banner"
+        ></iframe>
+      </section>
+
+      <section>
+        <h2>Desk <code>market-category-desk-inline.html</code></h2>
+        <iframe
+          src="./market-category-desk-inline.html"
+          title="Desk banner"
+        ></iframe>
+      </section>
+
+      <section>
+        <h2>Print <code>market-category-print-inline.html</code></h2>
+        <iframe
+          src="./market-category-print-inline.html"
+          title="Print banner"
+        ></iframe>
+      </section>
+
+      <section>
+        <h2>Collapse modes <code>by container width</code></h2>
+        <div class="modes">
+          <div>
+            <p>Narrow slot &mdash; 600px</p>
+            <iframe
+              src="./market-category-desk-inline.html"
+              style="width: 600px"
+              title="Desk banner in a 600px slot"
+            ></iframe>
+          </div>
+          <div>
+            <p>Sidebar &mdash; 340px</p>
+            <iframe
+              src="./market-category-desk-inline.html"
+              style="width: 340px"
+              title="Desk banner in a 340px slot"
+            ></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script>
+      /* Height-fit every frame to its own content. The banners are
+         container-query driven, so their height depends on the slot width -
+         guessing a fixed height here just clips them. */
+      function fit(frame) {
+        try {
+          var doc = frame.contentDocument;
+          if (!doc) return;
+          var el = doc.querySelector(".market-cat");
+          if (el) frame.style.height = Math.ceil(el.getBoundingClientRect().height) + "px";
+        } catch (error) {
+          /* cross-origin: leave the frame at its natural size */
+        }
+      }
+
+      var frames = Array.prototype.slice.call(document.querySelectorAll("iframe"));
+      frames.forEach(function (frame) {
+        frame.addEventListener("load", function () {
+          fit(frame);
+        });
+        fit(frame);
+      });
+      addEventListener("resize", function () {
+        frames.forEach(fit);
+      });
+    </script>
+  </body>
+</html>

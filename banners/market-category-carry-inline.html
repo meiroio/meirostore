@@ -1,0 +1,326 @@
+<style>
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    background: transparent;
+  }
+
+  /* A banner cannot know how wide its slot is: the same viewport might give
+     it a full-width strip or a 360px sidebar. Container queries below key off
+     this wrapper's own width, so the layout is correct in either. */
+  /* The slot reserves a height; the banner fills it, so its own border and
+     background are what the reader sees edge to edge. Stretching rather than
+     height: 100% avoids percentage-height resolution against an auto parent,
+     and degrades to intrinsic height wherever no height is reserved. */
+  .market-cat-fit {
+    container-type: inline-size;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    inline-size: 100%;
+  }
+
+  .market-cat {
+    /* Storefront tokens, resolved to hex - a pasted banner has no access to
+       tokens.css. Values match the app exactly so ink and rules line up with
+       the surrounding page. */
+    --paper: #0c0c18;
+    --well: #020206;
+    --rule: #272833;
+    --rule-strong: #5b5c6c;
+    --ink: #eeeef1;
+    --ink-secondary: #97989e;
+    --muted: #85858d;
+    --accent: #ff5f19;
+    --accent-hover: #e4540f;
+    --accent-ink: #0c0c18;
+    --focus: #53cdff;
+    --art-line: #91919a;
+    --art-line-2: #595a64;
+    --art-grid: #1b1c25;
+
+    position: relative;
+    display: grid;
+    grid-template-areas: "plate lead action";
+    grid-template-columns: 12rem minmax(0, 1.05fr) minmax(15rem, 0.95fr);
+    inline-size: 100%;
+    min-inline-size: 0;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .market-cat::before {
+    content: "";
+    position: absolute;
+    /* Above the plate, which is positioned and would otherwise paint over
+       this and hide the stripe entirely once the layout stacks. */
+    z-index: 1;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: 2px;
+    background: var(--accent);
+  }
+
+  /* Pictogram plate - same recessed well, dot grid and corner registration
+     ticks as a product cell in the catalog. */
+  .market-cat__plate {
+    position: relative;
+    grid-area: plate;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    border-inline-end: 1px solid var(--rule);
+    background-color: var(--well);
+    background-image: radial-gradient(var(--art-grid) 1px, transparent 1px);
+    background-size: 12px 12px;
+    background-position: center;
+  }
+
+  .market-cat__plate::before,
+  .market-cat__plate::after {
+    content: "";
+    position: absolute;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border: 0 solid var(--rule-strong);
+  }
+
+  .market-cat__plate::before {
+    inset-block-start: 0.5rem;
+    inset-inline-start: 0.5rem;
+    border-block-start-width: 1px;
+    border-inline-start-width: 1px;
+  }
+
+  .market-cat__plate::after {
+    inset-block-end: 0.5rem;
+    inset-inline-end: 0.5rem;
+    border-block-end-width: 1px;
+    border-inline-end-width: 1px;
+  }
+
+  .market-cat__art {
+    display: block;
+    inline-size: 100%;
+    max-inline-size: 8rem;
+    block-size: auto;
+    overflow: visible;
+  }
+
+  .market-cat__art .line,
+  .market-cat__art .thin,
+  .market-cat__art .dash,
+  .market-cat__art .mark {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .market-cat__art .line {
+    stroke: var(--art-line);
+    stroke-width: 2;
+  }
+
+  .market-cat__art .thin {
+    stroke: var(--art-line-2);
+    stroke-width: 1.25;
+  }
+
+  .market-cat__art .dash {
+    stroke: var(--art-line-2);
+    stroke-width: 1.25;
+    stroke-dasharray: 5 5;
+  }
+
+  .market-cat__art .mark {
+    stroke: var(--accent);
+    stroke-width: 2;
+  }
+
+  .market-cat__lead,
+  .market-cat__action {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 0.6rem;
+    padding: 1.25rem;
+  }
+
+  .market-cat__lead {
+    grid-area: lead;
+  }
+
+  .market-cat__action {
+    grid-area: action;
+    border-inline-start: 1px solid var(--rule);
+  }
+
+  .market-cat__eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .market-cat__eyebrow span {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .market-cat h1 {
+    max-inline-size: 26ch;
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(1.1rem, 1.9vw, 1.5rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .market-cat__action p {
+    max-inline-size: 42ch;
+    margin: 0;
+    color: var(--ink-secondary);
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  /* Category breadth stated typographically rather than with six more
+     drawings - keeps the plate to one confident pictogram. */
+  .market-cat__index {
+    padding-block-start: 0.5rem;
+    border-block-start: 1px solid var(--rule);
+    color: var(--muted);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 0.6875rem !important;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .market-cat a {
+    display: inline-flex;
+    gap: 0.5rem;
+    min-block-size: 2.75rem;
+    align-items: center;
+    padding-inline: 1rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: background-color 120ms ease;
+  }
+
+  .market-cat a:hover {
+    background: var(--accent-hover);
+  }
+
+  .market-cat a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* Plate keeps its column, copy and action stack beside it. */
+  @container (max-width: 46rem) {
+    .market-cat {
+      grid-template-areas:
+        "plate lead"
+        "plate action";
+      grid-template-columns: 11rem minmax(0, 1fr);
+    }
+
+    .market-cat__lead {
+      padding-block-end: 0;
+    }
+
+    .market-cat__action {
+      border-inline-start: 0;
+    }
+  }
+
+  @container (max-width: 26rem) {
+    .market-cat {
+      grid-template-areas:
+        "plate"
+        "lead"
+        "action";
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .market-cat__plate {
+      padding-block: 1.5rem;
+      border-block-end: 1px solid var(--rule);
+      border-inline-end: 0;
+    }
+
+    .market-cat__art {
+      max-inline-size: 7rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .market-cat a {
+      transition: none;
+    }
+  }
+</style>
+
+<div class="market-cat-fit">
+<section class="market-cat" aria-labelledby="market-cat-carry-title">
+  <div class="market-cat__plate">
+    <svg
+      class="market-cat__art"
+      viewBox="0 0 280 210"
+      role="img"
+      aria-label="Technical drawing of a tote bag"
+    >
+      <path class="line" d="M78 84L202 84L214 182L66 182Z" />
+      <path class="line" d="M102 84C102 40 178 40 178 84" />
+      <path class="thin" d="M114 84C114 52 166 52 166 84" />
+      <path class="thin" d="M77 96L203 96" />
+      <path class="dash" d="M70 172L210 172" />
+      <path class="mark" d="M130 132L140 120L150 132L140 144Z" />
+    </svg>
+  </div>
+
+  <div class="market-cat__lead">
+    <p class="market-cat__eyebrow">Carry <span>6 objects &middot; from $14</span></p>
+    <h1 id="market-cat-carry-title">
+      Bags with more context than a page view.
+    </h1>
+  </div>
+
+  <div class="market-cat__action">
+    <p>Totes, packs and pouches for laptops, cables and badges.</p>
+    <p class="market-cat__index">
+      Tote&nbsp;&middot; Bottle&nbsp;&middot; Backpack&nbsp;&middot; Duffel&nbsp;&middot; Pouch&nbsp;&middot; Lanyard
+    </p>
+    <a href="/#catalog">Browse Carry <span aria-hidden="true">&rarr;</span></a>
+  </div>
+</section>
+</div>

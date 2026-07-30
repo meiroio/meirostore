@@ -102,6 +102,33 @@ Ready-to-paste Market-styled HTML:
   use **Popup**, **Medium**, **Bottom right**, disable the built-in close button,
   and trigger on a click matching `[data-mpt-trigger="add-to-cart"]`.
 
+One per catalog category, each carrying the matching technical drawing. Use
+**Inline**, **Full width**, and the `catalog-personalization` ID anchor:
+
+- [`banners/market-category-wear-inline.html`](banners/market-category-wear-inline.html)
+- [`banners/market-category-carry-inline.html`](banners/market-category-carry-inline.html)
+- [`banners/market-category-desk-inline.html`](banners/market-category-desk-inline.html)
+- [`banners/market-category-print-inline.html`](banners/market-category-print-inline.html)
+
+Target each one at a realtime audience built from `view_item` or `add_to_cart`
+events carrying that `item_category`, so a visitor who has been browsing Desk
+objects sees the Desk banner.
+
+The category banners lay themselves out from the width of the slot they land in
+rather than the width of the browser window, using container queries: three
+columns above 46rem, plate-beside-stacked-copy down to 26rem, fully stacked
+below that. They can go in a sidebar without further work.
+
+Open [`banners/preview.html`](banners/preview.html) over HTTP to check all four
+plus both collapse points before pasting anything:
+
+```bash
+cd banners && python3 -m http.server 8777
+```
+
+Every banner file is standalone, ASCII-only, and free of external fonts, images
+and scripts, so nothing depends on the host page beyond a place to sit.
+
 ## Stable activation selectors
 
 | Purpose | Selector |
