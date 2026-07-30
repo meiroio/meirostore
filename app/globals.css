@@ -399,47 +399,255 @@
     text-wrap: pretty;
   }
 
-  .activation-slot {
-    display: grid;
-    min-block-size: 6rem;
+  /* The slot reserves exactly the height an injected banner will occupy, so
+     the swap costs zero layout shift. The four values are the measured
+     maximum height across all four category banners in each of their layout
+     bands — see banners/market-category-*.html, whose container queries break
+     at the same 46rem / 26rem points. Raise these if a banner grows taller.
+
+     Border and background live on the skeleton, not here: the banner brings
+     its own, and painting them twice would double the rule. */
+  /* The container context sits one level out so the slot itself can be sized
+     by a container query — an element cannot be styled by a query against its
+     own container. */
+  .activation-fit {
+    container-type: inline-size;
     margin-inline: var(--gutter);
-    overflow: hidden;
-    place-items: center;
-    background: var(--color-well);
-    border: var(--rule-hair) solid var(--color-rule);
   }
 
-  .activation-slot--hero {
+  /* The slot owns the height. Whatever is inside it — the waiting skeleton or
+     an injected banner — stretches to fill, so the box the reader sees is the
+     same before and after, and no gap of page background is left inside. */
+  .activation-slot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-block-size: 11.6875rem; /* 187px */
+  }
+
+  .activation-slot > * {
+    align-self: stretch;
+    min-inline-size: 0;
+  }
+
+  @container (max-width: 46rem) {
+    .activation-slot {
+      min-block-size: 19.1875rem; /* 307px */
+    }
+  }
+
+  @container (max-width: 26rem) {
+    .activation-slot {
+      min-block-size: 26.25rem; /* 420px */
+    }
+  }
+
+  .activation-fit--hero {
     margin-block-end: var(--space-xl);
   }
 
-  .activation-slot--catalog {
-    min-block-size: 4.5rem;
+  .activation-fit--catalog {
     margin-block: var(--space-lg);
   }
 
-  .activation-slot__empty {
+  /* ────────── Inline slot · waiting state ──────────
+     A wireframe of a real category banner: same three areas, same column
+     widths, same cell padding, same 46rem / 26rem collapse points. Its
+     Height comes from .activation-slot, which the skeleton stretches to fill;
+     this only mirrors the banner's shape. */
+  .slot-skeleton {
+    position: relative;
+    place-self: stretch;
     display: grid;
-    gap: var(--space-2xs);
-    justify-items: center;
+    grid-template-areas: "plate lead action";
+    grid-template-columns: 12rem minmax(0, 1.05fr) minmax(15rem, 0.95fr);
+    /* The reserved heights below are outer heights, matching how the banner
+       measures — so the hairline border has to sit inside them. */
+    box-sizing: border-box;
+    overflow: hidden;
+    background: var(--color-paper-2);
+    border: var(--rule-hair) solid var(--color-rule);
+  }
+
+  @container (max-width: 46rem) {
+    .slot-skeleton {
+      grid-template-areas:
+        "plate lead"
+        "plate action";
+      grid-template-columns: 11rem minmax(0, 1fr);
+    }
+  }
+
+  @container (max-width: 26rem) {
+    .slot-skeleton {
+      grid-template-areas:
+        "plate"
+        "lead"
+        "action";
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* The one animation on the page: a slow accent sweep. Transform only, and
+     it lives on the skeleton so it stops existing the moment Engage injects. */
+  .slot-skeleton::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 45%;
+    /* Soft trail rising to a thin bright edge: a scan head, not a vague haze. */
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--color-accent) 5%, transparent) 62%,
+      color-mix(in oklch, var(--color-accent) 13%, transparent) 85%,
+      color-mix(in oklch, var(--color-accent) 40%, transparent) 90%,
+      color-mix(in oklch, var(--color-accent) 52%, transparent) 91.5%,
+      transparent 93%
+    );
+    pointer-events: none;
+    animation: slot-sweep 3.2s var(--ease-in-out) infinite;
+  }
+
+  @keyframes slot-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(322%);
+    }
+  }
+
+  /* Recessed plate with the dot grid, as in a product cell and a real
+     banner — but dashed, because nothing has arrived yet. */
+  .slot-skeleton__plate {
+    position: relative;
+    grid-area: plate;
+    display: grid;
+    place-items: center;
     padding: var(--space-md);
+    border-inline-end: var(--rule-hair) dashed var(--color-rule);
+    background-color: var(--color-well);
+    background-image: radial-gradient(
+      var(--color-art-grid) 1px,
+      transparent 1px
+    );
+    background-size: 12px 12px;
+    background-position: center;
+  }
+
+  .slot-skeleton__mark {
+    inline-size: min(100%, 3rem);
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .slot-skeleton__copy,
+  .slot-skeleton__action {
+    display: grid;
+    gap: var(--space-sm);
+    align-content: center;
+    justify-items: start;
+    min-inline-size: 0;
+    padding: var(--space-md);
+  }
+
+  .slot-skeleton__copy {
+    grid-area: lead;
+  }
+
+  .slot-skeleton__action {
+    grid-area: action;
+    border-inline-start: var(--rule-hair) dashed var(--color-rule);
+  }
+
+  @container (max-width: 46rem) {
+    .slot-skeleton__copy {
+      padding-block-end: 0;
+    }
+
+    .slot-skeleton__action {
+      border-inline-start: 0;
+    }
+  }
+
+  @container (max-width: 26rem) {
+    .slot-skeleton__plate {
+      border-block-end: var(--rule-hair) dashed var(--color-rule);
+      border-inline-end: 0;
+    }
+  }
+
+  .slot-skeleton__label {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
     color: var(--color-muted);
+    font-family: var(--font-label);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+
+  .slot-skeleton__label i {
+    inline-size: 0.4rem;
+    block-size: 0.4rem;
+    flex: 0 0 auto;
+    background: var(--color-accent);
+  }
+
+  /* Stand-ins for the headline and lede the real banner will bring. Widths are
+     set by class, not :nth-of-type — the bars share the span type with their
+     siblings, so positional selectors land on the wrong elements. */
+  .slot-skeleton__bar {
+    block-size: 0.5rem;
+    background: var(--color-paper-3);
+  }
+
+  .slot-skeleton__bar--wide {
+    inline-size: min(100%, 20rem);
+  }
+
+  .slot-skeleton__bar--narrow {
+    inline-size: min(100%, 13rem);
+  }
+
+  .slot-skeleton__copy code {
+    color: var(--color-ink-3);
     font-family: var(--font-mono);
     font-size: var(--text-2xs);
-    text-align: center;
+    overflow-wrap: anywhere;
   }
 
-  .activation-slot__empty code {
-    color: var(--color-ink-3);
-    font: inherit;
+  /* Where the banner's filled CTA will land. */
+  .slot-skeleton__cta {
+    inline-size: 7rem;
+    block-size: 2.75rem;
+    border: var(--rule-hair) dashed var(--color-rule-2);
   }
 
-  .activation-slot:has(> [data-mpt-web-banner-id])
-    > .activation-slot__empty {
+  .activation-slot:has(> [data-mpt-web-banner-id]) > .slot-skeleton {
     display: none;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .slot-skeleton::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  /* Fill the reserved width so the injected banner resolves its own container
+     queries against the slot, and lands at the height reserved for it. */
   .activation-slot > [data-mpt-web-banner-id] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    inline-size: 100%;
     max-inline-size: 100%;
   }
 
