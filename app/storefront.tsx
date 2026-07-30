@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
   type MouseEvent,
 } from "react";
@@ -23,6 +24,7 @@ import {
 } from "@/lib/catalog";
 
 type EventStatus = "preview" | "sending" | "sent" | "error";
+type Cart = Record<string, number>;
 type MarketEvent = {
   id: string;
   name: string;
@@ -44,9 +46,13 @@ const endpointHost = collectionEndpoint
 const eventTime = new Intl.DateTimeFormat("en-GB", {
   timeStyle: "medium",
 });
+const cartStorageKey = "meiro-market-cart";
+const emptyCartSnapshot = "{}";
+const cartSubscribers = new Set<() => void>();
 
 let mpt: MptClient | null = null;
 let mptInitFailed = false;
+let inMemoryCartSnapshot = emptyCartSnapshot;
 
 function initMpt(): MptClient | null {
   if (mpt || mptInitFailed || !collectionEndpoint) return mpt;
@@ -110,11 +116,72 @@ function normalizeEvent(
   };
 }
 
+function subscribeToCart(onCartChange: () => void) {
+  cartSubscribers.add(onCartChange);
+  return () => cartSubscribers.delete(onCartChange);
+}
+
+function readCartSnapshot() {
+  try {
+    const storedCart = window.localStorage.getItem(cartStorageKey);
+    inMemoryCartSnapshot = storedCart ?? emptyCartSnapshot;
+  } catch {
+    // Keep the cart functional when browser storage is unavailable.
+  }
+  return inMemoryCartSnapshot;
+}
+
+function readServerCartSnapshot() {
+  return emptyCartSnapshot;
+}
+
+function parseCart(snapshot: string, products: Product[]): Cart {
+  try {
+    const storedCart: unknown = JSON.parse(snapshot);
+    if (
+      !storedCart ||
+      typeof storedCart !== "object" ||
+      Array.isArray(storedCart)
+    ) {
+      return {};
+    }
+
+    const productIds = new Set(products.map((product) => product.id));
+    return Object.fromEntries(
+      Object.entries(storedCart).filter(
+        ([productId, quantity]) =>
+          productIds.has(productId) &&
+          typeof quantity === "number" &&
+          Number.isSafeInteger(quantity) &&
+          quantity > 0,
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function persistCart(cart: Cart) {
+  const snapshot = JSON.stringify(cart);
+  inMemoryCartSnapshot = snapshot;
+  try {
+    window.localStorage.setItem(cartStorageKey, snapshot);
+  } catch {
+    // The in-memory fallback still preserves cart behavior for this page load.
+  }
+  cartSubscribers.forEach((onCartChange) => onCartChange());
+}
+
 export default function Storefront({ products }: { products: Product[] }) {
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [query, setQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const cartSnapshot = useSyncExternalStore(
+    subscribeToCart,
+    readCartSnapshot,
+    readServerCartSnapshot,
+  );
+  const cart = parseCart(cartSnapshot, products);
   const [events, setEvents] = useState<MarketEvent[]>([]);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [railOpen, setRailOpen] = useState(false);
@@ -225,7 +292,7 @@ export default function Storefront({ products }: { products: Product[] }) {
   }
 
   function addToCart(product: Product, closeProduct = false) {
-    setCart((current) => ({
+    updateCart((current) => ({
       ...current,
       [product.id]: (current[product.id] ?? 0) + 1,
     }));
@@ -244,7 +311,7 @@ export default function Storefront({ products }: { products: Product[] }) {
   }
 
   function removeFromCart(product: Product) {
-    setCart((current) => {
+    updateCart((current) => {
       const next = { ...current };
       delete next[product.id];
       return next;
@@ -296,8 +363,13 @@ export default function Storefront({ products }: { products: Product[] }) {
       value: cartValue,
       currency,
     });
-    setCart({});
+    updateCart(() => ({}));
     setCompletedOrderId(transactionId);
+  }
+
+  function updateCart(update: (current: Cart) => Cart) {
+    const currentCart = parseCart(readCartSnapshot(), products);
+    persistCart(update(currentCart));
   }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -691,7 +763,7 @@ export default function Storefront({ products }: { products: Product[] }) {
       >
         <div className="sheet__cart">
           <div className="rail__head">
-            <p className="micro">Cart · current session</p>
+            <p className="micro">Cart · saved locally</p>
             <button
               className="rail__close"
               type="button"

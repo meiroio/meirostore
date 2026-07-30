@@ -1,0 +1,38 @@
+{
+  "scanned_at": "2026-07-29",
+  "font_stack": {
+    "value": "Geist + Geist Mono via next/font; Geist Mono is the display face, Geist Sans is prose-only",
+    "sources": ["app/layout.tsx:2", "tokens.css:44"]
+  },
+  "palette": {
+    "value": "OKLCH token system, Terminal (Meiro-anchored): violet-cast dark paper band (hue 282), mono display, Meiro orange #FF5F19 accent at hue 39.6. Brand values taken from meiro.io's declared CSS variables; every token round-trips to the exact brand hex.",
+    "sources": ["tokens.css:2"]
+  },
+  "brand": {
+    "value": "accent #FF5F19 · accent-hover #E5540F · dark #0C0C18 · dark-2 #1A1A2E · success #87C867 · warning #f6a83c · lockup app/icon.svg",
+    "sources": ["https://www.meiro.io/", "https://www.meiro.io/images/Meiro-logo-2026.svg"]
+  },
+  "motion": {
+    "value": "motion-cut; no animation dependency. CSS transitions only, 120/200/360ms, three named easings",
+    "sources": ["package.json:11", "tokens.css:66"]
+  },
+  "spacing": {
+    "value": "4-pt named scale --space-3xs…3xl plus --gutter clamp",
+    "sources": ["tokens.css:52"]
+  },
+  "framework": {
+    "value": "Next.js 16.2.12 App Router + React 19.2.4 + native CSS",
+    "sources": ["package.json:12", "package.json:13", "app/page.tsx:1"]
+  },
+  "preserve": [
+    "Next.js App Router",
+    "Geist fonts",
+    "tokens.css OKLCH system",
+    "square-corner discipline (all radii 0)",
+    "accent reserved for brand + structure, never prices",
+    "cool focus ring (hue 230) — deliberately unlike the warm accent",
+    "log active-row marker stays neutral ink so it reads apart from ok/warn/error",
+    "app/drawings.tsx — 24 hand-built monoline drawings, one per ProductArt, typed as Record<ProductArt, ReactNode> so a missing drawing is a build error. Stroke system: d-line 2.0 outline / d-thin 1.25 construction / d-dash 1.25 / exactly one d-mark accent lozenge per object. viewBox 0 0 280 210, optically centred near (140,112). Add products by adding an art kind here first."
+  ],
+  "replace": []
+}

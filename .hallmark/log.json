@@ -1,0 +1,23 @@
+[
+  {
+    "date": "2026-07-29",
+    "macrostructure": "Workbench",
+    "theme": "Terminal (Meiro-anchored)",
+    "theme_axes": "dark / mono / warm",
+    "brand_source": "meiro.io declared tokens — accent #FF5F19, accent-hover #E5540F, dark ramp #0C0C18/#1A1A2E, success #87C867, warning #f6a83c; lockup from Meiro-logo-2026.svg",
+    "enrichment": "none in hero; Tier-B monoline technical drawings for product art",
+    "brief": "Redesign of the Meiro Market storefront — technical/minimalist kept, amateur execution replaced, then re-anchored on the real Meiro brand",
+    "nav": "N8",
+    "footer": "Ft4",
+    "scope": "page"
+  },
+  {
+    "date": "2026-07-29",
+    "macrostructure": "Catalogue",
+    "theme": "Midnight",
+    "enrichment": "Tier A/B local product artwork",
+    "brief": "Public Meiro Events SDK commerce demo",
+    "nav": "N9",
+    "footer": "Ft2"
+  }
+]

@@ -14,6 +14,8 @@ npm run dev
 
 The catalog, cart, product art, and transformation preview are local. No
 Shopify account, database, or payment provider is required.
+The cart is saved in browser storage across reloads and cleared after a
+simulated purchase.
 
 ## Connect Meiro Pipes
 
@@ -91,6 +93,14 @@ conditions.
 
 Audience membership is read when Web Banners initialize. Reload the store after
 a profile enters a new realtime audience to test the targeted experience.
+
+Ready-to-paste Market-styled HTML:
+
+- [`banners/market-personalization-inline.html`](banners/market-personalization-inline.html):
+  use **Inline**, **Full width**, and the `hero-personalization` ID anchor.
+- [`banners/market-add-to-cart-popup.html`](banners/market-add-to-cart-popup.html):
+  use **Popup**, **Medium**, **Bottom right**, disable the built-in close button,
+  and trigger on a click matching `[data-mpt-trigger="add-to-cart"]`.
 
 ## Stable activation selectors
 
