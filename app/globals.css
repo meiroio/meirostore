@@ -265,9 +265,19 @@
     transition: color var(--dur-micro) var(--ease-out);
   }
 
-  /* Below this the sub-brand label would crowd the counters. */
-  @media (max-width: 23.4rem) {
+  /* Below this the sub-brand label would crowd the three controls. */
+  @media (max-width: 30rem) {
     .wordmark__tail {
+      display: none;
+    }
+
+    .control--sdk b {
+      display: none;
+    }
+  }
+
+  @media (max-width: 22rem) {
+    .wordmark__name {
       display: none;
     }
   }
@@ -1161,6 +1171,188 @@
     transition: background-color var(--dur-micro) var(--ease-out);
   }
 
+  .sheet--settings {
+    inline-size: min(calc(100% - 2rem), 34rem);
+    max-block-size: calc(100dvh - 2rem);
+    margin: auto;
+    overflow-y: auto;
+  }
+
+  .sheet__settings {
+    display: grid;
+  }
+
+  .sdk-settings {
+    display: grid;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+
+  .sdk-settings fieldset {
+    display: grid;
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .sdk-settings__core,
+  .sdk-option {
+    border: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .sdk-settings__core {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    color: var(--color-ink-2);
+    font-family: var(--font-label);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sdk-settings__core b {
+    color: var(--color-ok);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+    white-space: nowrap;
+  }
+
+  .sdk-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-md);
+    align-items: start;
+    padding: var(--space-md);
+    cursor: pointer;
+    transition: background-color var(--dur-micro) var(--ease-out);
+  }
+
+  .sdk-option + .sdk-option {
+    border-block-start: 0;
+  }
+
+  .sdk-option input {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    margin: 0.1rem 0 0;
+    accent-color: var(--color-accent);
+  }
+
+  .sdk-option__copy {
+    display: grid;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+  }
+
+  .sdk-option__copy b {
+    color: var(--color-ink);
+    font-family: var(--font-label);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sdk-option__copy small {
+    color: var(--color-ink-3);
+    font-size: var(--text-sm);
+  }
+
+  .sdk-option__copy code {
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    overflow-wrap: anywhere;
+  }
+
+  .sdk-settings__summary {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: space-between;
+    padding-block-start: var(--space-sm);
+    border-block-start: var(--rule-hair) solid var(--color-rule);
+    color: var(--color-muted);
+    font-family: var(--font-label);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+
+  .sdk-settings__summary b {
+    color: var(--color-ink-2);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-align: end;
+    text-transform: none;
+  }
+
+  .sdk-settings .micro--note {
+    padding: 0;
+  }
+
+  .sdk-settings__error {
+    color: var(--color-error);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+  }
+
+  @supports not (accent-color: auto) {
+    .sdk-option {
+      position: relative;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sdk-option input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .sdk-option__copy {
+      padding-inline-start: calc(1.125rem + var(--space-md));
+    }
+
+    .sdk-option__copy::before {
+      content: "";
+      position: absolute;
+      inset-block-start: calc(var(--space-md) + 0.1rem);
+      inset-inline-start: var(--space-md);
+      inline-size: 1.125rem;
+      block-size: 1.125rem;
+      box-sizing: border-box;
+      border: var(--rule-heavy) solid var(--color-rule-2);
+      background: var(--color-paper);
+    }
+
+    .sdk-option input:checked + .sdk-option__copy::before {
+      border-color: var(--color-accent);
+      background: var(--color-accent);
+    }
+
+    .sdk-option input:checked + .sdk-option__copy::after {
+      content: "✓";
+      position: absolute;
+      inset-block-start: calc(var(--space-md) - 0.08rem);
+      inset-inline-start: calc(var(--space-md) + 0.2rem);
+      color: var(--color-accent-ink);
+      font-family: var(--font-label);
+      font-size: var(--text-xs);
+      font-weight: 700;
+    }
+
+    .sdk-option input:focus-visible + .sdk-option__copy::before {
+      outline: var(--rule-heavy) solid var(--color-focus);
+      outline-offset: 2px;
+    }
+  }
+
   .sheet--cart {
     inline-size: min(100%, var(--rail-width));
     block-size: 100dvh;
@@ -1384,6 +1576,10 @@
 
     .action:hover {
       background: var(--color-accent-hover);
+    }
+
+    .sdk-option:hover {
+      background: var(--color-paper-3);
     }
 
     .wordmark:hover .wordmark__tail {

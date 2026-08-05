@@ -30,8 +30,16 @@ Restart or redeploy the app after changing this build-time variable.
 
 The storefront creates one browser client with
 [`@meiroio/web-sdk`](https://www.npmjs.com/package/@meiroio/web-sdk).
-It enables tracking rules and Web Banners at page load, but leaves automatic
-link tracking off to avoid duplicating the explicit commerce events.
+Core event collection is always loaded. Use the **SDK** settings in the header
+to independently enable Tracking Rules and Web Banners. The optional entry
+points are dynamically imported, so a core-only page does not load either
+feature implementation. Applying a new feature set saves it in browser storage
+and reloads the page because the SDK fixes its features on the first
+`createMpt` call.
+
+Tracking uses `trackingRules()` from `@meiroio/web-sdk/tracking`; automatic link
+tracking remains off to avoid duplicating the explicit commerce events. Banners
+use `webBanners()` from `@meiroio/web-sdk/web-banners`.
 
 The demo grants SDK storage and identity consent so realtime audience targeting
 works immediately. A production site must replace this with choices from its
@@ -46,7 +54,8 @@ Without `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`, the inspector is labeled
    enable it.
 2. Copy its collection URL from **Tracking Setup** into
    `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`.
-3. Keep tracking rules enabled. A page-view-only rule is enough for this demo:
+3. Keep Tracking Rules enabled in the storefront SDK settings. A
+   page-view-only rule is enough for this demo:
 
    ```js
    function configure(sdk, on, runtime) {

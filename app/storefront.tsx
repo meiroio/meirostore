@@ -13,6 +13,7 @@ import {
   createMpt,
   type MptClient,
   type MptEventPayload,
+  type MptFeature,
 } from "@meiroio/web-sdk";
 import { TechnicalDrawing } from "./drawings";
 import {
@@ -25,6 +26,10 @@ import {
 
 type EventStatus = "preview" | "sending" | "sent" | "error";
 type Cart = Record<string, number>;
+type SdkFeatures = {
+  tracking: boolean;
+  banners: boolean;
+};
 type MarketEvent = {
   id: string;
   name: string;
@@ -47,37 +52,112 @@ const eventTime = new Intl.DateTimeFormat("en-GB", {
   timeStyle: "medium",
 });
 const cartStorageKey = "meiro-market-cart";
+const sdkFeaturesStorageKey = "meiro-market-sdk-features";
+const defaultSdkFeatures: SdkFeatures = { tracking: true, banners: true };
+const defaultSdkFeaturesSnapshot = JSON.stringify(defaultSdkFeatures);
 const emptyCartSnapshot = "{}";
 const cartSubscribers = new Set<() => void>();
 
 let mpt: MptClient | null = null;
-let mptInitFailed = false;
+let mptInit: Promise<MptClient | null> | null = null;
 let inMemoryCartSnapshot = emptyCartSnapshot;
+let inMemorySdkFeaturesSnapshot = defaultSdkFeaturesSnapshot;
 
-function initMpt(): MptClient | null {
-  if (mpt || mptInitFailed || !collectionEndpoint) return mpt;
+function subscribeToSdkFeatures() {
+  return () => {};
+}
+
+function readSdkFeaturesSnapshot() {
   try {
-    mpt = createMpt({
-      collectionEndpoint,
-      linkTracking: { enabled: false },
-      trackingRules: { enabled: true },
-      webBanners: { enabled: true },
-      consent: {
-        storagePersistence: "granted",
-        userId: "granted",
-        sessionId: "granted",
-      },
-    });
-  } catch (error) {
-    mptInitFailed = true;
-    console.warn(
-      `Meiro SDK: could not initialise — ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    );
-    return null;
+    const stored = window.localStorage.getItem(sdkFeaturesStorageKey);
+    inMemorySdkFeaturesSnapshot = stored ?? defaultSdkFeaturesSnapshot;
+  } catch {
+    // Keep the default feature set when browser storage is unavailable.
   }
-  return mpt;
+  return inMemorySdkFeaturesSnapshot;
+}
+
+function readServerSdkFeaturesSnapshot() {
+  return defaultSdkFeaturesSnapshot;
+}
+
+function parseSdkFeatures(snapshot: string): SdkFeatures {
+  try {
+    const value: unknown = JSON.parse(snapshot);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return defaultSdkFeatures;
+    }
+
+    const features = value as Partial<SdkFeatures>;
+    return {
+      tracking: features.tracking !== false,
+      banners: features.banners !== false,
+    };
+  } catch {
+    return defaultSdkFeatures;
+  }
+}
+
+function persistSdkFeatures(features: SdkFeatures) {
+  try {
+    window.localStorage.setItem(
+      sdkFeaturesStorageKey,
+      JSON.stringify(features),
+    );
+    inMemorySdkFeaturesSnapshot = JSON.stringify(features);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function describeSdkFeatures(features: SdkFeatures) {
+  return `core${features.tracking ? " + tracking" : ""}${
+    features.banners ? " + banners" : ""
+  }`;
+}
+
+function initMpt(): Promise<MptClient | null> {
+  if (mpt) return Promise.resolve(mpt);
+  if (!collectionEndpoint) return Promise.resolve(null);
+  if (mptInit) return mptInit;
+
+  mptInit = (async () => {
+    try {
+      const enabledFeatures = parseSdkFeatures(readSdkFeaturesSnapshot());
+      const [tracking, banners] = await Promise.all([
+        enabledFeatures.tracking
+          ? import("@meiroio/web-sdk/tracking")
+          : null,
+        enabledFeatures.banners
+          ? import("@meiroio/web-sdk/web-banners")
+          : null,
+      ]);
+      const features: MptFeature[] = [];
+      if (tracking) features.push(tracking.trackingRules());
+      if (banners) features.push(banners.webBanners());
+
+      mpt = createMpt({
+        collectionEndpoint,
+        features,
+        consent: {
+          storagePersistence: "granted",
+          userId: "granted",
+          sessionId: "granted",
+        },
+      });
+      return mpt;
+    } catch (error) {
+      console.warn(
+        `Meiro SDK: could not initialise — ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
+  })();
+
+  return mptInit;
 }
 
 function normalizeEvent(
@@ -187,9 +267,19 @@ export default function Storefront({ products }: { products: Product[] }) {
   const [railOpen, setRailOpen] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
+  const sdkFeaturesSnapshot = useSyncExternalStore(
+    subscribeToSdkFeatures,
+    readSdkFeaturesSnapshot,
+    readServerSdkFeaturesSnapshot,
+  );
+  const sdkFeatures = parseSdkFeatures(sdkFeaturesSnapshot);
+  const [draftSdkFeatures, setDraftSdkFeatures] =
+    useState<SdkFeatures>(defaultSdkFeatures);
+  const [settingsSaveFailed, setSettingsSaveFailed] = useState(false);
   const productDialogRef = useRef<HTMLDialogElement>(null);
   const cartDialogRef = useRef<HTMLDialogElement>(null);
   const checkoutDialogRef = useRef<HTMLDialogElement>(null);
+  const settingsDialogRef = useRef<HTMLDialogElement>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProducts = products.filter((product) => {
@@ -223,9 +313,16 @@ export default function Storefront({ products }: { products: Product[] }) {
   }));
   const activeEvent =
     events.find((event) => event.id === activeEventId) ?? events[0];
+  const sdkFeatureLabel = describeSdkFeatures(sdkFeatures);
+  const draftSdkFeatureLabel = describeSdkFeatures(draftSdkFeatures);
+  const activeOptionalFeatures =
+    Number(sdkFeatures.tracking) + Number(sdkFeatures.banners);
+  const sdkSettingsChanged =
+    sdkFeatures.tracking !== draftSdkFeatures.tracking ||
+    sdkFeatures.banners !== draftSdkFeatures.banners;
 
   useEffect(() => {
-    initMpt();
+    void initMpt();
   }, []);
 
   useEffect(() => {
@@ -241,43 +338,50 @@ export default function Storefront({ products }: { products: Product[] }) {
   function captureEvent(name: string, payload: MptEventPayload) {
     const id = crypto.randomUUID();
     const capturedAt = new Date().toISOString();
-    const client = initMpt();
     const nextEvent: MarketEvent = {
       id,
       name,
       capturedAt,
-      status: client ? "sending" : "preview",
+      status: collectionEndpoint ? "sending" : "preview",
       raw: {
         method: "mpt.event",
         event_name: name,
         timestamp: capturedAt,
         payload,
       },
-      normalized: normalizeEvent(name, payload, capturedAt, client),
+      normalized: normalizeEvent(name, payload, capturedAt, mpt),
     };
 
     setEvents((current) => [nextEvent, ...current].slice(0, 12));
     setActiveEventId(id);
     setRailOpen(true);
 
-    if (client) {
-      void client
-        .event(name, payload)
-        .then(() => {
-          setEvents((current) =>
-            current.map((event) =>
-              event.id === id ? { ...event, status: "sent" } : event,
-            ),
-          );
-        })
-        .catch(() => {
-          setEvents((current) =>
-            current.map((event) =>
-              event.id === id ? { ...event, status: "error" } : event,
-            ),
-          );
-        });
-    }
+    if (!collectionEndpoint) return;
+
+    const updateEvent = (update: Partial<MarketEvent>) => {
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === id ? { ...event, ...update } : event,
+        ),
+      );
+    };
+
+    void initMpt().then(async (client) => {
+      if (!client) {
+        updateEvent({ status: "error" });
+        return;
+      }
+
+      updateEvent({
+        normalized: normalizeEvent(name, payload, capturedAt, client),
+      });
+      try {
+        await client.event(name, payload);
+        updateEvent({ status: "sent" });
+      } catch {
+        updateEvent({ status: "error" });
+      }
+    });
   }
 
   function openProduct(product: Product) {
@@ -380,6 +484,25 @@ export default function Storefront({ products }: { products: Product[] }) {
     });
   }
 
+  function openSettings() {
+    setDraftSdkFeatures(sdkFeatures);
+    setSettingsSaveFailed(false);
+    const dialog = settingsDialogRef.current;
+    dialog?.showModal();
+    window.requestAnimationFrame(() => {
+      dialog?.querySelector<HTMLInputElement>("input")?.focus();
+    });
+  }
+
+  function applySdkSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!persistSdkFeatures(draftSdkFeatures)) {
+      setSettingsSaveFailed(true);
+      return;
+    }
+    window.location.reload();
+  }
+
   function closeOnBackdrop(event: MouseEvent<HTMLDialogElement>) {
     if (event.target === event.currentTarget) event.currentTarget.close();
   }
@@ -400,7 +523,10 @@ export default function Storefront({ products }: { products: Product[] }) {
             collector <b>{endpointHost ?? "—"}</b>
           </span>
           <span className="readout">
-            personalization <b>{collectionEndpoint ? "armed" : "off"}</b>
+            personalization{" "}
+            <b>
+              {collectionEndpoint && sdkFeatures.banners ? "armed" : "off"}
+            </b>
           </span>
           <span className="readout" aria-live="polite">
             events <b>{String(events.length).padStart(3, "0")}</b>
@@ -442,6 +568,16 @@ export default function Storefront({ products }: { products: Product[] }) {
           </form>
 
           <div className="chrome__actions">
+            <button
+              className="control control--sdk"
+              type="button"
+              onClick={openSettings}
+              aria-haspopup="dialog"
+              aria-label={`Configure SDK features, ${activeOptionalFeatures} of 2 optional features enabled`}
+            >
+              sdk
+              <b>{activeOptionalFeatures}/2</b>
+            </button>
             <button
               className="control control--rail"
               type="button"
@@ -583,9 +719,7 @@ export default function Storefront({ products }: { products: Product[] }) {
               </div>
               <div>
                 <dt>sdk</dt>
-                <dd>
-                  events + tracking rules + web banners — link tracking off
-                </dd>
+                <dd>{sdkFeatureLabel} — optional modules loaded on demand</dd>
               </div>
               <div>
                 <dt>catalog</dt>
@@ -699,6 +833,97 @@ export default function Storefront({ products }: { products: Product[] }) {
           )}
         </aside>
       </div>
+
+      <dialog
+        className="sheet sheet--settings"
+        ref={settingsDialogRef}
+        onClick={closeOnBackdrop}
+      >
+        <div className="sheet__settings">
+          <div className="rail__head">
+            <p className="micro">SDK settings</p>
+            <button
+              className="rail__close"
+              type="button"
+              onClick={() => settingsDialogRef.current?.close()}
+              aria-label="Close SDK settings"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+
+          <form className="sdk-settings" onSubmit={applySdkSettings}>
+            <p className="prose">
+              Core event collection is always included. Enable only the
+              optional modules you want this page to load.
+            </p>
+
+            <div className="sdk-settings__core">
+              <span>Core events</span>
+              <b>always on</b>
+            </div>
+
+            <fieldset>
+              <legend className="visually-hidden">Optional SDK features</legend>
+              <label className="sdk-option">
+                <input
+                  type="checkbox"
+                  checked={draftSdkFeatures.tracking}
+                  onChange={(event) =>
+                    setDraftSdkFeatures((current) => ({
+                      ...current,
+                      tracking: event.target.checked,
+                    }))
+                  }
+                />
+                <span className="sdk-option__copy">
+                  <b>Tracking rules</b>
+                  <small>Run remotely configured DOM tracking rules.</small>
+                  <code>@meiroio/web-sdk/tracking</code>
+                </span>
+              </label>
+              <label className="sdk-option">
+                <input
+                  type="checkbox"
+                  checked={draftSdkFeatures.banners}
+                  onChange={(event) =>
+                    setDraftSdkFeatures((current) => ({
+                      ...current,
+                      banners: event.target.checked,
+                    }))
+                  }
+                />
+                <span className="sdk-option__copy">
+                  <b>Web Banners</b>
+                  <small>Load and render Engage Web Banners.</small>
+                  <code>@meiroio/web-sdk/web-banners</code>
+                </span>
+              </label>
+            </fieldset>
+
+            <p className="sdk-settings__summary">
+              next load <b>{draftSdkFeatureLabel}</b>
+            </p>
+            <p className="micro micro--note">
+              Applying reloads the page because features are fixed when the SDK
+              client is first created.
+            </p>
+            {settingsSaveFailed && (
+              <p className="sdk-settings__error" role="alert">
+                Browser storage is unavailable. Settings were not changed.
+              </p>
+            )}
+            <button
+              className="action"
+              type="submit"
+              data-dialog-primary
+              disabled={!sdkSettingsChanged}
+            >
+              apply and reload
+            </button>
+          </form>
+        </div>
+      </dialog>
 
       <dialog
         className="sheet sheet--product"
