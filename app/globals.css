@@ -1195,6 +1195,69 @@
     border: 0;
   }
 
+  .sdk-field {
+    display: grid;
+    gap: var(--space-xs);
+    color: var(--color-ink-2);
+    font-family: var(--font-label);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sdk-field small {
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .sdk-field input {
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding-inline: var(--space-sm);
+    border: var(--rule-heavy) solid var(--color-rule-2);
+    border-radius: 0;
+    background: var(--color-well);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+
+  .sdk-field input::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
+  }
+
+  .sdk-trial {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-md);
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--color-paper-3);
+    border-inline-start: var(--rule-heavy) solid var(--color-accent);
+    color: var(--color-ink-3);
+    font-size: var(--text-sm);
+  }
+
+  .sdk-trial b,
+  .sdk-trial strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .sdk-trial a {
+    color: var(--color-accent);
+    font-family: var(--font-label);
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   .sdk-settings__core,
   .sdk-option {
     border: var(--rule-hair) solid var(--color-rule);
@@ -1582,6 +1645,10 @@
       background: var(--color-paper-3);
     }
 
+    .sdk-trial a:hover {
+      color: var(--color-ink);
+    }
+
     .wordmark:hover .wordmark__tail {
       color: var(--color-ink-2);
     }
@@ -1594,6 +1661,12 @@
     .readout:nth-child(2),
     .readout:nth-child(3) {
       display: none;
+    }
+  }
+
+  @media (max-width: 30rem) {
+    .sdk-trial {
+      grid-template-columns: 1fr;
     }
   }
 

@@ -19,23 +19,26 @@ simulated purchase.
 
 ## Connect Meiro Pipes
 
-Set the public collection endpoint in `.env.local`. Use the complete Web SDK
-collector URL from Meiro Pipes, including the scheme, host, and source slug:
+Open the storefront and paste the complete Web SDK collector URL from Meiro
+Pipes into the **SDK** settings, including the scheme, host, and source slug.
+The settings dialog opens automatically when no collector is saved.
 
-```bash
-NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT=https://your-pipes-domain/collect/web-sdk
-```
+The collector and optional SDK features are stored in browser storage. Each
+browser can therefore connect to a different Pipes instance without rebuilding
+or redeploying the app. Applying settings reloads the page because the SDK
+fixes its configuration on the first `createMpt` call. Clear the collector URL
+to return that browser to local-preview mode.
 
-Restart or redeploy the app after changing this build-time variable.
+If you do not have a collector yet, the dialog links to
+[Meiro Pipes](https://meiro.io/product/meiro-pipes/), where you can choose
+**Launch full trial**.
 
 The storefront creates one browser client with
 [`@meiroio/web-sdk`](https://www.npmjs.com/package/@meiroio/web-sdk).
-Core event collection is always loaded. Use the **SDK** settings in the header
-to independently enable Tracking Rules and Web Banners. The optional entry
-points are dynamically imported, so a core-only page does not load either
-feature implementation. Applying a new feature set saves it in browser storage
-and reloads the page because the SDK fixes its features on the first
-`createMpt` call.
+Core event collection is always loaded. Use the same settings to independently
+enable Tracking Rules and Web Banners. The optional entry points are
+dynamically imported, so a core-only page does not load either feature
+implementation.
 
 Tracking uses `trackingRules()` from `@meiroio/web-sdk/tracking`; automatic link
 tracking remains off to avoid duplicating the explicit commerce events. Banners
@@ -45,15 +48,15 @@ The demo grants SDK storage and identity consent so realtime audience targeting
 works immediately. A production site must replace this with choices from its
 consent-management platform.
 
-Without `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`, the inspector is labeled
-**Local preview**, personalization is off, and no request is sent.
+Without a saved collector URL, the inspector is labeled **Local preview**,
+personalization is off, and no request is sent.
 
 ## Configure Pipes
 
 1. In **Pipes → Sources**, create a source from the **Web SDK** template and
    enable it.
-2. Copy its collection URL from **Tracking Setup** into
-   `NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT`.
+2. Copy its collection URL from **Tracking Setup** into the storefront's
+   **SDK** settings.
 3. Keep Tracking Rules enabled in the storefront SDK settings. A
    page-view-only rule is enough for this demo:
 

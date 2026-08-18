@@ -26,7 +26,8 @@ import {
 
 type EventStatus = "preview" | "sending" | "sent" | "error";
 type Cart = Record<string, number>;
-type SdkFeatures = {
+type SdkSettings = {
+  collectionEndpoint: string;
   tracking: boolean;
   banners: boolean;
 };
@@ -39,97 +40,107 @@ type MarketEvent = {
   normalized: Record<string, unknown>;
 };
 
-const configuredEndpoint =
-  process.env.NEXT_PUBLIC_MEIRO_COLLECTION_ENDPOINT?.trim();
-const collectionEndpoint =
-  configuredEndpoint && URL.canParse(configuredEndpoint)
-    ? configuredEndpoint
-    : null;
-const endpointHost = collectionEndpoint
-  ? new URL(collectionEndpoint).host
-  : null;
 const eventTime = new Intl.DateTimeFormat("en-GB", {
   timeStyle: "medium",
 });
 const cartStorageKey = "meiro-market-cart";
-const sdkFeaturesStorageKey = "meiro-market-sdk-features";
-const defaultSdkFeatures: SdkFeatures = { tracking: true, banners: true };
-const defaultSdkFeaturesSnapshot = JSON.stringify(defaultSdkFeatures);
+const sdkSettingsStorageKey = "meiro-market-sdk-settings";
+const legacySdkFeaturesStorageKey = "meiro-market-sdk-features";
+const defaultSdkSettings: SdkSettings = {
+  collectionEndpoint: "",
+  tracking: true,
+  banners: true,
+};
+const defaultSdkSettingsSnapshot = JSON.stringify(defaultSdkSettings);
 const emptyCartSnapshot = "{}";
 const cartSubscribers = new Set<() => void>();
 
 let mpt: MptClient | null = null;
 let mptInit: Promise<MptClient | null> | null = null;
 let inMemoryCartSnapshot = emptyCartSnapshot;
-let inMemorySdkFeaturesSnapshot = defaultSdkFeaturesSnapshot;
+let inMemorySdkSettingsSnapshot = defaultSdkSettingsSnapshot;
 
-function subscribeToSdkFeatures() {
+function subscribeToSdkSettings() {
   return () => {};
 }
 
-function readSdkFeaturesSnapshot() {
+function readSdkSettingsSnapshot() {
   try {
-    const stored = window.localStorage.getItem(sdkFeaturesStorageKey);
-    inMemorySdkFeaturesSnapshot = stored ?? defaultSdkFeaturesSnapshot;
+    const stored =
+      window.localStorage.getItem(sdkSettingsStorageKey) ??
+      window.localStorage.getItem(legacySdkFeaturesStorageKey);
+    inMemorySdkSettingsSnapshot = stored ?? defaultSdkSettingsSnapshot;
   } catch {
-    // Keep the default feature set when browser storage is unavailable.
+    // Keep the default settings when browser storage is unavailable.
   }
-  return inMemorySdkFeaturesSnapshot;
+  return inMemorySdkSettingsSnapshot;
 }
 
-function readServerSdkFeaturesSnapshot() {
-  return defaultSdkFeaturesSnapshot;
+function readServerSdkSettingsSnapshot() {
+  return defaultSdkSettingsSnapshot;
 }
 
-function parseSdkFeatures(snapshot: string): SdkFeatures {
+function parseCollectionEndpoint(value: unknown) {
+  if (typeof value !== "string") return "";
+
+  const endpoint = value.trim();
+  try {
+    const { protocol } = new URL(endpoint);
+    return protocol === "http:" || protocol === "https:" ? endpoint : "";
+  } catch {
+    return "";
+  }
+}
+
+function parseSdkSettings(snapshot: string): SdkSettings {
   try {
     const value: unknown = JSON.parse(snapshot);
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return defaultSdkFeatures;
+      return defaultSdkSettings;
     }
 
-    const features = value as Partial<SdkFeatures>;
+    const settings = value as Partial<SdkSettings>;
     return {
-      tracking: features.tracking !== false,
-      banners: features.banners !== false,
+      collectionEndpoint: parseCollectionEndpoint(
+        settings.collectionEndpoint,
+      ),
+      tracking: settings.tracking !== false,
+      banners: settings.banners !== false,
     };
   } catch {
-    return defaultSdkFeatures;
+    return defaultSdkSettings;
   }
 }
 
-function persistSdkFeatures(features: SdkFeatures) {
+function persistSdkSettings(settings: SdkSettings) {
   try {
-    window.localStorage.setItem(
-      sdkFeaturesStorageKey,
-      JSON.stringify(features),
-    );
-    inMemorySdkFeaturesSnapshot = JSON.stringify(features);
+    const snapshot = JSON.stringify(settings);
+    window.localStorage.setItem(sdkSettingsStorageKey, snapshot);
+    inMemorySdkSettingsSnapshot = snapshot;
     return true;
   } catch {
     return false;
   }
 }
 
-function describeSdkFeatures(features: SdkFeatures) {
-  return `core${features.tracking ? " + tracking" : ""}${
-    features.banners ? " + banners" : ""
+function describeSdkFeatures(settings: SdkSettings) {
+  return `core${settings.tracking ? " + tracking" : ""}${
+    settings.banners ? " + banners" : ""
   }`;
 }
 
-function initMpt(): Promise<MptClient | null> {
+function initMpt(settings: SdkSettings): Promise<MptClient | null> {
   if (mpt) return Promise.resolve(mpt);
-  if (!collectionEndpoint) return Promise.resolve(null);
+  if (!settings.collectionEndpoint) return Promise.resolve(null);
   if (mptInit) return mptInit;
 
   mptInit = (async () => {
     try {
-      const enabledFeatures = parseSdkFeatures(readSdkFeaturesSnapshot());
       const [tracking, banners] = await Promise.all([
-        enabledFeatures.tracking
+        settings.tracking
           ? import("@meiroio/web-sdk/tracking")
           : null,
-        enabledFeatures.banners
+        settings.banners
           ? import("@meiroio/web-sdk/web-banners")
           : null,
       ]);
@@ -138,7 +149,7 @@ function initMpt(): Promise<MptClient | null> {
       if (banners) features.push(banners.webBanners());
 
       mpt = createMpt({
-        collectionEndpoint,
+        collectionEndpoint: settings.collectionEndpoint,
         features,
         consent: {
           storagePersistence: "granted",
@@ -267,15 +278,15 @@ export default function Storefront({ products }: { products: Product[] }) {
   const [railOpen, setRailOpen] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
-  const sdkFeaturesSnapshot = useSyncExternalStore(
-    subscribeToSdkFeatures,
-    readSdkFeaturesSnapshot,
-    readServerSdkFeaturesSnapshot,
+  const sdkSettingsSnapshot = useSyncExternalStore(
+    subscribeToSdkSettings,
+    readSdkSettingsSnapshot,
+    readServerSdkSettingsSnapshot,
   );
-  const sdkFeatures = parseSdkFeatures(sdkFeaturesSnapshot);
-  const [draftSdkFeatures, setDraftSdkFeatures] =
-    useState<SdkFeatures>(defaultSdkFeatures);
-  const [settingsSaveFailed, setSettingsSaveFailed] = useState(false);
+  const sdkSettings = parseSdkSettings(sdkSettingsSnapshot);
+  const [draftSdkSettings, setDraftSdkSettings] =
+    useState<SdkSettings>(defaultSdkSettings);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const productDialogRef = useRef<HTMLDialogElement>(null);
   const cartDialogRef = useRef<HTMLDialogElement>(null);
   const checkoutDialogRef = useRef<HTMLDialogElement>(null);
@@ -313,16 +324,32 @@ export default function Storefront({ products }: { products: Product[] }) {
   }));
   const activeEvent =
     events.find((event) => event.id === activeEventId) ?? events[0];
-  const sdkFeatureLabel = describeSdkFeatures(sdkFeatures);
-  const draftSdkFeatureLabel = describeSdkFeatures(draftSdkFeatures);
+  const collectionEndpoint = sdkSettings.collectionEndpoint || null;
+  const endpointHost = collectionEndpoint
+    ? new URL(collectionEndpoint).host
+    : null;
+  const sdkFeatureLabel = describeSdkFeatures(sdkSettings);
+  const draftSdkFeatureLabel = describeSdkFeatures(draftSdkSettings);
   const activeOptionalFeatures =
-    Number(sdkFeatures.tracking) + Number(sdkFeatures.banners);
+    Number(sdkSettings.tracking) + Number(sdkSettings.banners);
   const sdkSettingsChanged =
-    sdkFeatures.tracking !== draftSdkFeatures.tracking ||
-    sdkFeatures.banners !== draftSdkFeatures.banners;
+    sdkSettings.collectionEndpoint !==
+      draftSdkSettings.collectionEndpoint.trim() ||
+    sdkSettings.tracking !== draftSdkSettings.tracking ||
+    sdkSettings.banners !== draftSdkSettings.banners;
 
   useEffect(() => {
-    void initMpt();
+    const settings = parseSdkSettings(readSdkSettingsSnapshot());
+    void initMpt(settings);
+
+    const dialog = settingsDialogRef.current;
+    if (!settings.collectionEndpoint && dialog && !dialog.open) {
+      setDraftSdkSettings(settings);
+      dialog.showModal();
+      window.requestAnimationFrame(() => {
+        dialog.querySelector<HTMLInputElement>("#collector-url")?.focus();
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -366,7 +393,7 @@ export default function Storefront({ products }: { products: Product[] }) {
       );
     };
 
-    void initMpt().then(async (client) => {
+    void initMpt(sdkSettings).then(async (client) => {
       if (!client) {
         updateEvent({ status: "error" });
         return;
@@ -485,8 +512,8 @@ export default function Storefront({ products }: { products: Product[] }) {
   }
 
   function openSettings() {
-    setDraftSdkFeatures(sdkFeatures);
-    setSettingsSaveFailed(false);
+    setDraftSdkSettings(sdkSettings);
+    setSettingsError(null);
     const dialog = settingsDialogRef.current;
     dialog?.showModal();
     window.requestAnimationFrame(() => {
@@ -496,8 +523,19 @@ export default function Storefront({ products }: { products: Product[] }) {
 
   function applySdkSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!persistSdkFeatures(draftSdkFeatures)) {
-      setSettingsSaveFailed(true);
+    const collectionEndpoint = parseCollectionEndpoint(
+      draftSdkSettings.collectionEndpoint,
+    );
+    if (draftSdkSettings.collectionEndpoint.trim() && !collectionEndpoint) {
+      setSettingsError(
+        "Enter a complete collector URL beginning with http:// or https://.",
+      );
+      return;
+    }
+    if (!persistSdkSettings({ ...draftSdkSettings, collectionEndpoint })) {
+      setSettingsError(
+        "Browser storage is unavailable. Settings were not changed.",
+      );
       return;
     }
     window.location.reload();
@@ -525,7 +563,7 @@ export default function Storefront({ products }: { products: Product[] }) {
           <span className="readout">
             personalization{" "}
             <b>
-              {collectionEndpoint && sdkFeatures.banners ? "armed" : "off"}
+              {collectionEndpoint && sdkSettings.banners ? "armed" : "off"}
             </b>
           </span>
           <span className="readout" aria-live="polite">
@@ -838,10 +876,13 @@ export default function Storefront({ products }: { products: Product[] }) {
         className="sheet sheet--settings"
         ref={settingsDialogRef}
         onClick={closeOnBackdrop}
+        aria-labelledby="sdk-settings-title"
       >
         <div className="sheet__settings">
           <div className="rail__head">
-            <p className="micro">SDK settings</p>
+            <h2 className="micro" id="sdk-settings-title">
+              SDK settings
+            </h2>
             <button
               className="rail__close"
               type="button"
@@ -854,9 +895,58 @@ export default function Storefront({ products }: { products: Product[] }) {
 
           <form className="sdk-settings" onSubmit={applySdkSettings}>
             <p className="prose">
-              Core event collection is always included. Enable only the
-              optional modules you want this page to load.
+              Connect this browser to your Meiro Pipes collector. These
+              settings stay local, so every browser can use a different
+              instance.
             </p>
+
+            <label className="sdk-field" htmlFor="collector-url">
+              <span>Collector URL</span>
+              <small id="collector-url-hint">
+                Paste the complete Web SDK collection URL from Pipes. Clear it
+                to return to local preview.
+              </small>
+              <input
+                id="collector-url"
+                name="collector-url"
+                type="url"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="https://pipes.example.com/collect/web-sdk"
+                value={draftSdkSettings.collectionEndpoint}
+                onChange={(event) => {
+                  setDraftSdkSettings((current) => ({
+                    ...current,
+                    collectionEndpoint: event.target.value,
+                  }));
+                  setSettingsError(null);
+                }}
+                aria-describedby={
+                  settingsError?.startsWith("Enter")
+                    ? "collector-url-hint sdk-settings-error"
+                    : "collector-url-hint"
+                }
+                aria-invalid={
+                  settingsError?.startsWith("Enter") || undefined
+                }
+              />
+            </label>
+
+            <aside className="sdk-trial">
+              <p>
+                <b>Need a collector?</b> Open Meiro Pipes and choose
+                <strong> Launch full trial</strong>.
+              </p>
+              <a
+                href="https://meiro.io/product/meiro-pipes/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                open Meiro Pipes ↗
+              </a>
+            </aside>
 
             <div className="sdk-settings__core">
               <span>Core events</span>
@@ -868,9 +958,9 @@ export default function Storefront({ products }: { products: Product[] }) {
               <label className="sdk-option">
                 <input
                   type="checkbox"
-                  checked={draftSdkFeatures.tracking}
+                  checked={draftSdkSettings.tracking}
                   onChange={(event) =>
-                    setDraftSdkFeatures((current) => ({
+                    setDraftSdkSettings((current) => ({
                       ...current,
                       tracking: event.target.checked,
                     }))
@@ -885,9 +975,9 @@ export default function Storefront({ products }: { products: Product[] }) {
               <label className="sdk-option">
                 <input
                   type="checkbox"
-                  checked={draftSdkFeatures.banners}
+                  checked={draftSdkSettings.banners}
                   onChange={(event) =>
-                    setDraftSdkFeatures((current) => ({
+                    setDraftSdkSettings((current) => ({
                       ...current,
                       banners: event.target.checked,
                     }))
@@ -905,12 +995,16 @@ export default function Storefront({ products }: { products: Product[] }) {
               next load <b>{draftSdkFeatureLabel}</b>
             </p>
             <p className="micro micro--note">
-              Applying reloads the page because features are fixed when the SDK
+              Applying reloads the page because settings are fixed when the SDK
               client is first created.
             </p>
-            {settingsSaveFailed && (
-              <p className="sdk-settings__error" role="alert">
-                Browser storage is unavailable. Settings were not changed.
+            {settingsError && (
+              <p
+                className="sdk-settings__error"
+                id="sdk-settings-error"
+                role="alert"
+              >
+                {settingsError}
               </p>
             )}
             <button
