@@ -53,6 +53,7 @@ const defaultSdkSettings: SdkSettings = {
 };
 const defaultSdkSettingsSnapshot = JSON.stringify(defaultSdkSettings);
 const emptyCartSnapshot = "{}";
+const shirtSizes = ["XS", "S", "M", "L", "XL"] as const;
 const cartSubscribers = new Set<() => void>();
 
 let mpt: MptClient | null = null;
@@ -178,11 +179,14 @@ function normalizeEvent(
   client: MptClient | null,
 ) {
   return {
-    event_type: `commerce_${name}`,
+    event_type: name === "form_submit" ? name : `commerce_${name}`,
     occurred_at: capturedAt,
     identity: {
       user_id: client?.get("userId") || "preview-user",
       session_id: client?.get("sessionId") || "preview-session",
+      ...(name === "form_submit" && typeof payload.email === "string"
+        ? { email: payload.email }
+        : {}),
     },
     properties: {
       ...payload,
@@ -190,7 +194,12 @@ function normalizeEvent(
       page_path: window.location.pathname,
     },
     profile_signal:
-      name === "add_to_cart"
+      name === "form_submit"
+        ? {
+            trait: "shirt_size",
+            value: payload.field00,
+          }
+        : name === "add_to_cart"
         ? {
             trait: "last_cart_item",
             value: payload.item_name,
@@ -205,6 +214,19 @@ function normalizeEvent(
               value: name,
             },
   };
+}
+
+function syncLeadFieldValidity(input: HTMLInputElement) {
+  const fields =
+    input.type === "radio" && input.form
+      ? input.form.querySelectorAll<HTMLInputElement>(
+          'input[name="shirt_size"]',
+        )
+      : [input];
+
+  fields.forEach((field) => {
+    field.setAttribute("aria-invalid", String(!field.validity.valid));
+  });
 }
 
 function subscribeToCart(onCartChange: () => void) {
@@ -278,6 +300,7 @@ export default function Storefront({ products }: { products: Product[] }) {
   const [railOpen, setRailOpen] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
   const sdkSettingsSnapshot = useSyncExternalStore(
     subscribeToSdkSettings,
     readSdkSettingsSnapshot,
@@ -509,6 +532,33 @@ export default function Storefront({ products }: { products: Product[] }) {
       search_term: query || "(empty)",
       result_count: filteredProducts.length,
     });
+  }
+
+  function submitLead(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const firstName = String(data.get("first_name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
+    const shirtSize = String(data.get("shirt_size") ?? "");
+
+    if (
+      !firstName ||
+      !email ||
+      !shirtSizes.includes(shirtSize as (typeof shirtSizes)[number])
+    ) {
+      form.reportValidity();
+      return;
+    }
+
+    captureEvent("form_submit", {
+      form_id: "meiro_market_lead",
+      email,
+      first_name: firstName,
+      field00: shirtSize,
+    });
+    form.reset();
+    setLeadSubmitted(true);
   }
 
   function openSettings() {
@@ -744,6 +794,143 @@ export default function Storefront({ products }: { products: Product[] }) {
               </button>
             </section>
           )}
+
+          <section
+            className="lead-capture"
+            id="lead-capture"
+            aria-labelledby="lead-capture-title"
+          >
+            <div className="lead-capture__intro">
+              <p className="micro">profile enrichment · form_submit</p>
+              <h2 id="lead-capture-title">Leave us your email.</h2>
+              <p>
+                Add one known profile to the event stream. Meiro connects the
+                name and shirt size below to the journey already visible in the
+                inspector.
+              </p>
+            </div>
+
+            <div className="lead-capture__body">
+              {leadSubmitted ? (
+                <div className="lead-success" role="status">
+                  <p className="micro">form_submit · captured</p>
+                  <h3>Profile signal added.</h3>
+                  <p>
+                    The inspector now shows how this identity and shirt size
+                    join the current session.
+                  </p>
+                  <button type="button" onClick={() => setLeadSubmitted(false)}>
+                    add another profile
+                  </button>
+                </div>
+              ) : (
+                <form
+                  className="lead-form"
+                  method="post"
+                  onSubmit={submitLead}
+                  onInvalid={(event) => {
+                    if (event.target instanceof HTMLInputElement) {
+                      syncLeadFieldValidity(event.target);
+                    }
+                  }}
+                  onBlur={(event) => {
+                    if (event.target instanceof HTMLInputElement) {
+                      syncLeadFieldValidity(event.target);
+                    }
+                  }}
+                  onInput={(event) => {
+                    if (
+                      event.target instanceof HTMLInputElement &&
+                      event.target.validity.valid
+                    ) {
+                      syncLeadFieldValidity(event.target);
+                    }
+                  }}
+                >
+                  <div className="lead-form__identity">
+                    <label className="lead-field" htmlFor="lead-first-name">
+                      <span>
+                        First name <i aria-hidden="true">*</i>
+                      </span>
+                      <input
+                        className="lead-field__control"
+                        id="lead-first-name"
+                        name="first_name"
+                        type="text"
+                        autoComplete="given-name"
+                        enterKeyHint="next"
+                        maxLength={80}
+                        aria-errormessage="lead-first-name-error"
+                        required
+                      />
+                      <small
+                        className="lead-field__error"
+                        id="lead-first-name-error"
+                      >
+                        × Enter your first name.
+                      </small>
+                    </label>
+
+                    <label className="lead-field" htmlFor="lead-email">
+                      <span>
+                        Email <i aria-hidden="true">*</i>
+                      </span>
+                      <input
+                        className="lead-field__control"
+                        id="lead-email"
+                        name="email"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        enterKeyHint="next"
+                        maxLength={254}
+                        aria-errormessage="lead-email-error"
+                        required
+                      />
+                      <small
+                        className="lead-field__error"
+                        id="lead-email-error"
+                      >
+                        × Enter a valid email address.
+                      </small>
+                    </label>
+                  </div>
+
+                  <fieldset className="lead-sizes">
+                    <legend>
+                      Shirt size <i aria-hidden="true">*</i>
+                    </legend>
+                    <div className="lead-sizes__options">
+                      {shirtSizes.map((size) => (
+                        <label className="lead-size" key={size}>
+                          <input
+                            type="radio"
+                            name="shirt_size"
+                            value={size}
+                            aria-describedby="lead-size-error"
+                            required
+                          />
+                          <span>{size}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <small className="lead-field__error" id="lead-size-error">
+                      × Choose a shirt size.
+                    </small>
+                  </fieldset>
+
+                  <button
+                    className="lead-form__submit"
+                    type="submit"
+                    data-mpt-trigger="lead-submit"
+                  >
+                    create demo profile
+                  </button>
+                </form>
+              )}
+            </div>
+          </section>
 
           <footer className="colophon">
             <dl>
@@ -990,6 +1177,22 @@ export default function Storefront({ products }: { products: Product[] }) {
                 </span>
               </label>
             </fieldset>
+
+            <aside
+              className="sdk-consent"
+              aria-labelledby="sdk-consent-title"
+            >
+              <p className="micro" id="sdk-consent-title">
+                Analytics + marketing consent
+              </p>
+              <p>
+                <b>This demo assumes consent for both purposes.</b> Behavioral
+                events and submitted lead details may be joined into a profile
+                and used for campaign activation. Use test data only. In
+                production, replace this assumption with purpose-specific
+                choices from your consent-management platform.
+              </p>
+            </aside>
 
             <p className="sdk-settings__summary">
               next load <b>{draftSdkFeatureLabel}</b>

@@ -44,9 +44,11 @@ Tracking uses `trackingRules()` from `@meiroio/web-sdk/tracking`; automatic link
 tracking remains off to avoid duplicating the explicit commerce events. Banners
 use `webBanners()` from `@meiroio/web-sdk/web-banners`.
 
-The demo grants SDK storage and identity consent so realtime audience targeting
-works immediately. A production site must replace this with choices from its
-consent-management platform.
+The setup dialog states that the demo assumes both analytics and marketing
+consent, then grants SDK storage and identity consent so realtime audience
+targeting works immediately. Use test data only. A production site must replace
+this assumption with purpose-specific choices from its consent-management
+platform.
 
 Without a saved collector URL, the inspector is labeled **Local preview**,
 personalization is off, and no request is sent.
@@ -72,7 +74,7 @@ personalization is off, and no request is sent.
    ```
 
 4. Confirm the template's built-in event types include `page_view`,
-   `select_content`, `search`, `view_item`, `add_to_cart`,
+   `select_content`, `search`, `form_submit`, `view_item`, `add_to_cart`,
    `remove_from_cart`, `view_cart`, `begin_checkout`, `purchase`,
    `web_banner_impression`, `web_banner_click`, `web_banner_close`,
    `web_banner_submit`, and `survey_answer`.
@@ -81,6 +83,23 @@ personalization is off, and no request is sent.
 
 All storefront events use predefined Web SDK names, so the demo does not need
 a custom event type.
+
+## Capture a known profile
+
+The **Leave us your email** form emits the predefined `form_submit` event and
+opens the inspector so the identity enrichment is immediately visible. Its
+payload maps directly onto the Web SDK form schema:
+
+| Form value | Event field |
+| --- | --- |
+| Stable form identifier | `form_id: "meiro_market_lead"` |
+| Email | `email` |
+| First name | `first_name` |
+| Shirt size | `field00` |
+
+Configure email extraction on the Web SDK source, then map `first_name` and
+`field00` into profile attributes. Those attributes can drive audiences and
+the marketing campaigns demonstrated by the product.
 
 ## Configure Engage
 

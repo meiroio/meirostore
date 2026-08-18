@@ -720,6 +720,222 @@
       border-color var(--dur-micro) var(--ease-out);
   }
 
+  /* A profile-enrichment instrument, visually downstream from the catalog. */
+  .lead-capture {
+    display: grid;
+    margin: var(--space-2xl) var(--gutter) 0;
+    background: var(--color-paper-2);
+    border: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .lead-capture__intro,
+  .lead-capture__body {
+    min-inline-size: 0;
+    padding: var(--space-xl);
+  }
+
+  .lead-capture__intro {
+    display: grid;
+    gap: var(--space-md);
+    align-content: start;
+    background-color: var(--color-well);
+    background-image: radial-gradient(
+      var(--color-art-grid) 1px,
+      transparent 1px
+    );
+    background-size: 12px 12px;
+    border-block-end: var(--rule-hair) solid var(--color-rule);
+  }
+
+  .lead-capture__intro h2 {
+    max-inline-size: 16ch;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 500;
+    letter-spacing: var(--tracking-display);
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .lead-capture__intro > p:last-child,
+  .lead-success > p:not(.micro) {
+    max-inline-size: 52ch;
+    color: var(--color-ink-3);
+    text-wrap: pretty;
+  }
+
+  .lead-capture__body {
+    display: grid;
+    align-content: center;
+  }
+
+  .lead-form,
+  .lead-success {
+    display: grid;
+    gap: var(--space-lg);
+  }
+
+  .lead-form__identity {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .lead-field {
+    display: grid;
+    gap: var(--space-xs);
+    min-inline-size: 0;
+  }
+
+  .lead-field > span,
+  .lead-sizes legend {
+    color: var(--color-ink-2);
+    font-family: var(--font-label);
+    font-size: var(--text-xs);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .lead-field i,
+  .lead-sizes legend i {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .lead-field__control {
+    inline-size: 100%;
+    min-block-size: 3rem;
+    padding-inline: var(--space-sm);
+    border: var(--rule-heavy) solid var(--color-rule-2);
+    border-radius: 0;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 1rem;
+  }
+
+  .lead-field__control:is(:user-invalid, [aria-invalid="true"]) {
+    border-color: var(--color-error);
+  }
+
+  /* Reserved rather than toggled. Switching display here moved the size
+     selector and the submit button down the moment a message appeared, which
+     is the one time the reader is trying to aim at them. visibility keeps the
+     line's space and still hides it from assistive tech. */
+  .lead-field__error {
+    visibility: hidden;
+    color: var(--color-error);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-style: normal;
+  }
+
+  .lead-field__control:is(:user-invalid, [aria-invalid="true"])
+    + .lead-field__error,
+  .lead-sizes:has(input:is(:user-invalid, [aria-invalid="true"]))
+    > .lead-field__error {
+    visibility: visible;
+  }
+
+  .lead-sizes {
+    display: grid;
+    gap: var(--space-xs);
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .lead-sizes:has(input:is(:user-invalid, [aria-invalid="true"])) legend {
+    color: var(--color-error);
+  }
+
+  /* Match the text fields: the control itself carries the error, not only the
+     label above it. */
+  .lead-sizes:has(input:is(:user-invalid, [aria-invalid="true"]))
+    .lead-sizes__options {
+    border-block-start-color: var(--color-error);
+    border-inline-start-color: var(--color-error);
+  }
+
+  .lead-sizes:has(input:is(:user-invalid, [aria-invalid="true"]))
+    .lead-size span {
+    border-block-end-color: var(--color-error);
+    border-inline-end-color: var(--color-error);
+  }
+
+  .lead-sizes__options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-block-start: var(--rule-hair) solid var(--color-rule-2);
+    border-inline-start: var(--rule-hair) solid var(--color-rule-2);
+  }
+
+  .lead-size {
+    position: relative;
+    min-inline-size: 0;
+    cursor: pointer;
+  }
+
+  .lead-size input {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .lead-size span {
+    display: grid;
+    min-block-size: 3rem;
+    place-items: center;
+    border-block-end: var(--rule-hair) solid var(--color-rule-2);
+    border-inline-end: var(--rule-hair) solid var(--color-rule-2);
+    color: var(--color-ink-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    transition:
+      background-color var(--dur-micro) var(--ease-out),
+      color var(--dur-micro) var(--ease-out);
+  }
+
+  .lead-size input:checked + span {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-weight: 700;
+  }
+
+  .lead-size input:focus-visible + span {
+    outline: var(--rule-heavy) solid var(--color-focus);
+    outline-offset: -3px;
+  }
+
+  .lead-form__submit,
+  .lead-success button {
+    min-block-size: 3rem;
+    padding-inline: var(--space-lg);
+    border: var(--rule-heavy) solid var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    font-family: var(--font-label);
+    font-size: var(--text-2xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+
+  .lead-success h3 {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 500;
+  }
+
+  .lead-success button {
+    justify-self: start;
+    background: transparent;
+    color: var(--color-accent);
+  }
+
   /* ────────── Ft4 · dense colophon ────────── */
 
   .colophon {
@@ -1258,6 +1474,25 @@
     white-space: nowrap;
   }
 
+  /* Shares the raised surface with .sdk-trial: the two callouts have the same
+     shape, so they should sit at the same elevation and let the stripe colour
+     carry the difference — accent for an opportunity, warn for a caution.
+     On the recessed well it read as a different component family. */
+  .sdk-consent {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: var(--color-paper-3);
+    border-inline-start: var(--rule-heavy) solid var(--color-warn);
+    color: var(--color-ink-3);
+    font-size: var(--text-sm);
+  }
+
+  .sdk-consent b {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
   .sdk-settings__core,
   .sdk-option {
     border: var(--rule-hair) solid var(--color-rule);
@@ -1649,6 +1884,25 @@
       color: var(--color-ink);
     }
 
+    .lead-form__submit:hover {
+      background: var(--color-accent-hover);
+    }
+
+    .lead-success button:hover {
+      background: var(--color-accent);
+      color: var(--color-accent-ink);
+    }
+
+    .lead-size:hover span {
+      background: var(--color-paper-3);
+      color: var(--color-ink);
+    }
+
+    .lead-size:hover input:checked + span {
+      background: var(--color-accent-hover);
+      color: var(--color-accent-ink);
+    }
+
     .wordmark:hover .wordmark__tail {
       color: var(--color-ink-2);
     }
@@ -1682,6 +1936,10 @@
     .colophon dl div {
       grid-template-columns: 8rem minmax(0, 1fr);
     }
+
+    .lead-form__identity {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (min-width: 60rem) {
@@ -1707,6 +1965,15 @@
       gap: var(--space-xl);
       align-items: end;
       padding-block: var(--space-2xl) var(--space-xl);
+    }
+
+    .lead-capture {
+      grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr);
+    }
+
+    .lead-capture__intro {
+      border-block-end: 0;
+      border-inline-end: var(--rule-hair) solid var(--color-rule);
     }
 
     .sheet__body {
@@ -1781,6 +2048,7 @@
     .payload pre,
     .void button,
     .activation-slot,
+    .lead-capture,
     .checkout-result code {
       border-color: CanvasText;
     }
