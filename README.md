@@ -44,11 +44,10 @@ Tracking uses `trackingRules()` from `@meiroio/web-sdk/tracking`; automatic link
 tracking remains off to avoid duplicating the explicit commerce events. Banners
 use `webBanners()` from `@meiroio/web-sdk/web-banners`.
 
-The setup dialog states that the demo assumes both analytics and marketing
-consent, then grants SDK storage and identity consent so realtime audience
-targeting works immediately. Use test data only. A production site must replace
-this assumption with purpose-specific choices from its consent-management
-platform.
+The setup dialog explains that the demo assumes analytics consent, then grants
+SDK storage and identity consent so realtime audience targeting works. Marketing
+consent is an unchecked subscription checkbox in the lead popup, beside the
+email it applies to. Use test data only.
 
 Without a saved collector URL, the inspector is labeled **Local preview**,
 personalization is off, and no request is sent.
@@ -101,6 +100,16 @@ Configure email extraction on the Web SDK source, then map `first_name` and
 `field00` into profile attributes. Those attributes can drive audiences and
 the marketing campaigns demonstrated by the product.
 
+The popup emits the normal `web_banner_submit` event with `first_name`, `email`,
+`shirt_size`, and the checked `consent` field. It also posts
+`email_subscription_imported` to the Better Pipes Email channel endpoint. That
+managed event includes the normalized email, the checkbox boolean,
+`blocked: false`, the `meiro-market` subscription topic, browser language, and
+the submission time. In **Engage -> Channels -> Email**, select and save the
+maintained **Email subscription status** attribute so those events populate the
+Email campaign contact state. Its `brand_id` field is reserved by Pipes and
+currently remains `null`.
+
 ## Configure Engage
 
 Start with an untargeted banner to prove delivery before adding audience
@@ -110,9 +119,10 @@ conditions.
    Web SDK source.
 2. For an inline banner, choose an ID anchor and enter either
    `hero-personalization` or `catalog-personalization`.
-3. For a popup after an action, use the click trigger selector
-   `[data-mpt-trigger="add-to-cart"]` or
-   `[data-mpt-trigger="complete-purchase"]`.
+3. For the lead popup after an action, use the click trigger selector
+   `[data-mpt-trigger="open-cart"]` or a category selector such as
+   `.tabs button`. The HTML calls the storefront consent bridge while the Web
+   SDK emits its normal `web_banner_submit` event.
 4. Add a session frequency cap of `1`, preview the banner on the store, save
    it, and enable serving.
 5. For targeting, create a realtime attribute from `view_item`,
@@ -131,7 +141,8 @@ Ready-to-paste Market-styled HTML:
   use **Inline**, **Full width**, and the `hero-personalization` ID anchor.
 - [`banners/market-add-to-cart-popup.html`](banners/market-add-to-cart-popup.html):
   use **Popup**, **Medium**, **Bottom right**, disable the built-in close button,
-  and trigger on a click matching `[data-mpt-trigger="add-to-cart"]`.
+  and trigger on a click matching `[data-mpt-trigger="open-cart"]` or
+  `.tabs button`.
 
 One per catalog category, each carrying the matching technical drawing. Use
 **Inline**, **Full width**, and the `catalog-personalization` ID anchor:

@@ -39,6 +39,11 @@ type MarketEvent = {
   raw: Record<string, unknown>;
   normalized: Record<string, unknown>;
 };
+type MeiroMarketWindow = Window & {
+  meiroMarket?: {
+    syncEmailConsent: (email: string, consent: boolean) => Promise<void>;
+  };
+};
 
 const eventTime = new Intl.DateTimeFormat("en-GB", {
   timeStyle: "medium",
@@ -128,6 +133,53 @@ function describeSdkFeatures(settings: SdkSettings) {
   return `core${settings.tracking ? " + tracking" : ""}${
     settings.banners ? " + banners" : ""
   }`;
+}
+
+function consentEventEndpoint(collectionEndpoint: string) {
+  return new URL("/api/channels/email/events", collectionEndpoint).toString();
+}
+
+function browserLanguage() {
+  const language = document.documentElement.lang || navigator.language || "en";
+  return language.split("-")[0]?.toLowerCase() || "en";
+}
+
+async function syncEmailConsent(
+  settings: SdkSettings,
+  email: string,
+  consent: boolean,
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !settings.collectionEndpoint) return;
+
+  const endpoint = consentEventEndpoint(settings.collectionEndpoint);
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event_type: "email_subscription_imported",
+      event_time: new Date().toISOString(),
+      event_payload: {
+        campaign: null,
+        journey: null,
+        provider: null,
+        recipient: { email: normalizedEmail },
+        consent,
+        blocked: false,
+        subscription_topics: ["meiro-market"],
+        language: browserLanguage(),
+        context: { source: "meiro-market-lead-popup" },
+      },
+    }),
+  });
+  const result: unknown = await response.json().catch(() => null);
+  const accepted =
+    result && typeof result === "object" && "accepted" in result
+      ? (result as { accepted?: unknown }).accepted
+      : null;
+  if (!response.ok || accepted !== 1) {
+    throw new Error(`Email consent sync failed (${response.status}).`);
+  }
 }
 
 function initMpt(settings: SdkSettings): Promise<MptClient | null> {
@@ -374,6 +426,20 @@ export default function Storefront({ products }: { products: Product[] }) {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const bridgeWindow = window as MeiroMarketWindow;
+    const settings = parseSdkSettings(sdkSettingsSnapshot);
+    const bridge = {
+      syncEmailConsent: (email: string, consent: boolean) =>
+        syncEmailConsent(settings, email, consent),
+    };
+    bridgeWindow.meiroMarket = bridge;
+
+    return () => {
+      if (bridgeWindow.meiroMarket === bridge) delete bridgeWindow.meiroMarket;
+    };
+  }, [sdkSettingsSnapshot]);
 
   useEffect(() => {
     const dialog = productDialogRef.current;
@@ -1186,11 +1252,10 @@ export default function Storefront({ products }: { products: Product[] }) {
                 Analytics + marketing consent
               </p>
               <p>
-                <b>This demo assumes consent for both purposes.</b> Behavioral
-                events and submitted lead details may be joined into a profile
-                and used for campaign activation. Use test data only. In
-                production, replace this assumption with purpose-specific
-                choices from your consent-management platform.
+                <b>This demo assumes analytics consent.</b> Behavioral events
+                may be joined into a profile and used for personalization.
+                Marketing email is optional and requested in the lead popup.
+                Use test data only.
               </p>
             </aside>
 
