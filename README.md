@@ -192,3 +192,10 @@ tracking-rule and Web Banner lifecycle events are visible in Pipes.
 npm run lint
 npm run build
 ```
+
+## Vercel runtime
+
+Vercel Functions use Bun via `"bunVersion": "1.x"` in `vercel.json`.
+This selects the Bun 1.3 track rather than the breaking Bun 1.4 migration.
+Validate the preview deployment before merging; Bun on Vercel is in Beta.
+Install Bun locally: the development, build, and start scripts explicitly run Next.js with Bun.
